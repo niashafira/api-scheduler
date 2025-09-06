@@ -19,10 +19,10 @@ import {
   LinkOutlined, 
   LockOutlined, 
   ApiOutlined,
-  CheckCircleOutlined,
   CloseCircleOutlined
 } from '@ant-design/icons';
-import { apiService, jsonPath } from '../../utils/apiService';
+// Only need apiSourceApi for creating the source
+// No need for apiService or jsonPath since we removed the test functionality
 import tokenConfigApi from '../../services/tokenConfigApi';
 import apiSourceApi from '../../services/apiSourceApi';
 
@@ -35,10 +35,7 @@ const SourceStep = ({ onNext, onPrevious }) => {
   const [form] = Form.useForm();
   const [authType, setAuthType] = useState('none');
   const [headers, setHeaders] = useState([{ key: '', value: '' }]);
-  const [testingConnection, setTestingConnection] = useState(false);
-  const [testResult, setTestResult] = useState(null);
   const [activeTab, setActiveTab] = useState('create');
-  const [testStep, setTestStep] = useState('');
   const [existingTokenConfigs, setExistingTokenConfigs] = useState([]);
   const [loadingTokenConfigs, setLoadingTokenConfigs] = useState(false);
   const [selectedTokenConfigId, setSelectedTokenConfigId] = useState(null);
@@ -150,136 +147,6 @@ const SourceStep = ({ onNext, onPrevious }) => {
     setHeaders(updatedHeaders);
   };
 
-  const testConnection = async () => {
-    try {
-      setTestingConnection(true);
-      setTestResult(null);
-      
-      // Validate form first
-      const formValues = form.getFieldsValue();
-      if (!formValues.baseUrl) {
-        throw new Error('Base URL is required');
-      }
-      
-      if (authType === 'token' && tokenConfig.enabled) {
-        // Validate token configuration selection
-        if (!selectedTokenConfigId) {
-          throw new Error('Please select a token configuration');
-        }
-        
-        // Step 1: Test token acquisition
-        setTestStep('Acquiring token...');
-        const tokenResult = await testTokenAcquisition();
-        console.log('Token acquisition successful:', tokenResult);
-        
-        // Step 2: Test API with acquired token
-        setTestStep('Testing API with token...');
-        const apiResult = await testApiWithToken(formValues.baseUrl, tokenResult.tokenData.token);
-        console.log('API test with token successful:', apiResult);
-        
-        setTestResult({ 
-          success: true, 
-          message: 'Token acquisition and API test successful!',
-          details: `Token acquired and API endpoint tested successfully`,
-          tokenData: tokenResult.tokenData,
-          apiTested: true,
-          apiResponse: apiResult.response
-        });
-        message.success('Token acquisition and API test successful!');
-      } else {
-        // Test regular connection
-        await testRegularConnection();
-        setTestResult({ 
-          success: true, 
-          message: 'Connection test successful!',
-          details: 'API endpoint is reachable'
-        });
-        message.success('Connection test successful!');
-      }
-    } catch (error) {
-      console.error('Test connection error:', error);
-      setTestResult({ 
-        success: false, 
-        message: 'Connection failed: ' + error.message,
-        details: error.message
-      });
-      message.error('Connection test failed!');
-    } finally {
-      setTestingConnection(false);
-      setTestStep('');
-    }
-  };
-
-  const testTokenAcquisition = async () => {
-    console.log('Testing token acquisition with config:', tokenConfig);
-    
-    // Validate required fields
-    if (!tokenConfig.endpoint) {
-      throw new Error('Token endpoint is required');
-    }
-    
-    if (!tokenConfig.tokenPath) {
-      throw new Error('Token field path is required');
-    }
-
-    // Make the actual API call
-    const response = await apiService.testTokenAcquisition(tokenConfig);
-    console.log('Token response:', response);
-    
-    // Extract token data using JSON path
-    const tokenData = jsonPath.extractTokenData(response, tokenConfig);
-    
-    if (!tokenData.isValid) {
-      throw new Error(`No valid token found at path: ${tokenConfig.tokenPath}`);
-    }
-    
-    console.log('Extracted token data:', tokenData);
-    
-    return {
-      success: true,
-      tokenData,
-      response
-    };
-  };
-
-  const testApiWithToken = async (baseUrl, token) => {
-    console.log('Testing API with acquired token:', baseUrl);
-    
-    if (!baseUrl) {
-      throw new Error('Base URL is required');
-    }
-    
-    if (!token) {
-      throw new Error('Token is required');
-    }
-
-    // Make the actual API call with token
-    const response = await apiService.testApiWithToken(baseUrl, token, headers);
-    console.log('API response with token:', response);
-    
-    return {
-      success: true,
-      response
-    };
-  };
-
-  const testRegularConnection = async () => {
-    const formValues = form.getFieldsValue();
-    console.log('Testing regular connection to:', formValues.baseUrl);
-    
-    if (!formValues.baseUrl) {
-      throw new Error('Base URL is required');
-    }
-
-    // Make the actual API call
-    const response = await apiService.testRegularConnection(formValues.baseUrl, headers);
-    console.log('Connection response:', response);
-    
-    return {
-      success: true,
-      response
-    };
-  };
 
   const handleSubmit = async (values) => {
     try {
@@ -513,87 +380,6 @@ const SourceStep = ({ onNext, onPrevious }) => {
             >
               <Switch />
             </Form.Item>
-
-            <Divider />
-
-            <Space direction="vertical" style={{ width: '100%' }}>
-              <Button 
-                type="primary" 
-                onClick={testConnection} 
-                loading={testingConnection}
-                icon={<CheckCircleOutlined />}
-                block
-              >
-                {testingConnection ? (testStep || 'Testing...') : 'Test Connection'}
-              </Button>
-              
-              {testingConnection && authType === 'token' && (
-                <Card size="small" style={{ marginTop: 8 }}>
-                  <Steps size="small" current={testStep === 'Acquiring token...' ? 0 : testStep === 'Testing API with token...' ? 1 : 0}>
-                    <Step title="Acquire Token" description="Getting authentication token" />
-                    <Step title="Test API" description="Testing API with token" />
-                  </Steps>
-                </Card>
-              )}
-
-              {testResult && (
-                <Alert
-                  message={testResult.message}
-                  description={testResult.details}
-                  type={testResult.success ? 'success' : 'error'}
-                  showIcon
-                  style={{ marginTop: 8 }}
-                />
-              )}
-
-              {testResult && testResult.success && testResult.tokenData && (
-                <Card size="small" title="Test Results" style={{ marginTop: 8 }}>
-                  <Space direction="vertical" style={{ width: '100%' }}>
-                    <div>
-                      <Text strong>✅ Token Acquisition: </Text>
-                      <Text type="success">Successful</Text>
-                    </div>
-                    
-                    {testResult.apiTested && (
-                      <div>
-                        <Text strong>✅ API Test: </Text>
-                        <Text type="success">Successful</Text>
-                      </div>
-                    )}
-                    
-                    <Divider style={{ margin: '8px 0' }} />
-                    
-                    <div>
-                      <Text strong>Token: </Text>
-                      <Text code>{testResult.tokenData.token ? testResult.tokenData.token.substring(0, 50) + '...' : 'N/A'}</Text>
-                    </div>
-                    {testResult.tokenData.expiresIn && (
-                      <div>
-                        <Text strong>Expires In: </Text>
-                        <Text>{testResult.tokenData.expiresIn} seconds</Text>
-                      </div>
-                    )}
-                    {testResult.tokenData.refreshToken && (
-                      <div>
-                        <Text strong>Refresh Token: </Text>
-                        <Text code>{testResult.tokenData.refreshToken.substring(0, 30) + '...'}</Text>
-                      </div>
-                    )}
-                    
-                    {testResult.apiResponse && (
-                      <div>
-                        <Text strong>API Response: </Text>
-                        <Text type="secondary">
-                          {typeof testResult.apiResponse === 'object' 
-                            ? 'JSON response received' 
-                            : 'Response received'}
-                        </Text>
-                      </div>
-                    )}
-                  </Space>
-                </Card>
-              )}
-            </Space>
 
             <Divider />
 

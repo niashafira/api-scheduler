@@ -51,8 +51,8 @@ const SourcesTable = () => {
   };
 
   const handleEditSource = (id) => {
-    console.log('Edit source with id:', id);
-    // Navigate to edit page or open edit modal
+    // Navigate to edit wizard for this source
+    navigate(`/sources/edit/${id}`);
   };
 
   const showDeleteConfirm = (source) => {

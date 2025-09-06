@@ -31,7 +31,7 @@ const { Option } = Select;
 const { TabPane } = Tabs;
 const { Step } = Steps;
 
-const SourceStep = ({ onNext, onPrevious }) => {
+const SourceStep = ({ onNext, onPrevious, initialData = null, isEditMode = false }) => {
   const [form] = Form.useForm();
   const [authType, setAuthType] = useState('none');
   const [headers, setHeaders] = useState([{ key: '', value: '' }]);
@@ -56,6 +56,39 @@ const SourceStep = ({ onNext, onPrevious }) => {
   useEffect(() => {
     fetchExistingTokenConfigs();
   }, []);
+
+  // Populate form with initial data when in edit mode
+  useEffect(() => {
+    if (isEditMode && initialData) {
+      populateFormWithInitialData();
+    }
+  }, [isEditMode, initialData]);
+
+  const populateFormWithInitialData = () => {
+    if (!initialData) return;
+
+    // Set form values
+    form.setFieldsValue({
+      name: initialData.name || '',
+      baseUrl: initialData.base_url || '',
+      authType: initialData.auth_type || 'none',
+    });
+
+    // Set auth type and related fields
+    setAuthType(initialData.auth_type || 'none');
+
+    // Set headers
+    if (initialData.headers && Array.isArray(initialData.headers)) {
+      setHeaders(initialData.headers.length > 0 ? initialData.headers : [{ key: '', value: '' }]);
+    }
+
+    // Handle token configuration if auth type is token
+    if (initialData.auth_type === 'token' && initialData.token_config_id) {
+      setSelectedTokenConfigId(initialData.token_config_id);
+      // Load token config details
+      handleTokenConfigSelect(initialData.token_config_id);
+    }
+  };
 
   const fetchExistingTokenConfigs = async () => {
     try {
@@ -164,18 +197,25 @@ const SourceStep = ({ onNext, onPrevious }) => {
       
       console.log('Processed form data:', formData);
       
-      // Create API source in backend
-      const response = await apiSourceApi.createApiSource(formData);
-      console.log('API source created:', response);
+      let response;
+      if (isEditMode && initialData && initialData.id) {
+        // Update existing API source
+        response = await apiSourceApi.updateApiSource(initialData.id, formData);
+        console.log('API source updated:', response);
+        message.success('API source updated successfully!');
+      } else {
+        // Create new API source
+        response = await apiSourceApi.createApiSource(formData);
+        console.log('API source created:', response);
+        message.success('API source created successfully!');
+      }
       
-      message.success('API source created successfully!');
-      
-      // Move to next step with the created source data
+      // Move to next step with the source data
       if (onNext) onNext({ ...formData, id: response.data.id });
       
     } catch (error) {
-      console.error('Failed to create API source:', error);
-      message.error('Failed to create API source: ' + error.message);
+      console.error(`Failed to ${isEditMode ? 'update' : 'create'} API source:`, error);
+      message.error(`Failed to ${isEditMode ? 'update' : 'create'} API source: ` + error.message);
     }
   };
 

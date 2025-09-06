@@ -33,7 +33,7 @@ const { TabPane } = Tabs;
 const { TextArea } = Input;
 const { Step } = Steps;
 
-const RequestStep = ({ onNext, onPrevious, sourceData }) => {
+const RequestStep = ({ onNext, onPrevious, sourceData, initialData = null, isEditMode = false }) => {
   const [form] = Form.useForm();
   const [activeTab, setActiveTab] = useState('path');
   const [pathParams, setPathParams] = useState([]);
@@ -55,6 +55,47 @@ const RequestStep = ({ onNext, onPrevious, sourceData }) => {
       fetchApiSource(sourceData.id);
     }
   }, [sourceData]);
+
+  // Populate form with initial data when in edit mode
+  useEffect(() => {
+    if (isEditMode && initialData) {
+      populateFormWithInitialData();
+    }
+  }, [isEditMode, initialData]);
+
+  const populateFormWithInitialData = () => {
+    if (!initialData) return;
+
+    // Set form values
+    form.setFieldsValue({
+      name: initialData.name || '',
+    });
+
+    // Set request configuration
+    setHttpMethod(initialData.method || 'GET');
+    setEndpointPath(initialData.path || '');
+    setBodyFormat(initialData.body_format || 'json');
+    setRequestBody(initialData.body || '');
+
+    // Set parameters and headers
+    if (initialData.path_params && Array.isArray(initialData.path_params)) {
+      setPathParams(initialData.path_params.length > 0 ? initialData.path_params : [{ name: '', value: '' }]);
+    } else {
+      setPathParams([{ name: '', value: '' }]);
+    }
+
+    if (initialData.query_params && Array.isArray(initialData.query_params)) {
+      setQueryParams(initialData.query_params.length > 0 ? initialData.query_params : [{ name: '', value: '' }]);
+    } else {
+      setQueryParams([{ name: '', value: '' }]);
+    }
+
+    if (initialData.headers && Array.isArray(initialData.headers)) {
+      setHeaders(initialData.headers.length > 0 ? initialData.headers : [{ key: '', value: '' }]);
+    } else {
+      setHeaders([{ key: '', value: '' }]);
+    }
+  };
 
   const fetchApiSource = async (id) => {
     try {
@@ -324,21 +365,28 @@ const RequestStep = ({ onNext, onPrevious, sourceData }) => {
       
       console.log('Request configuration to save:', formData);
       
-      // Save request configuration to backend
-      const response = await apiRequestApi.createApiRequest(formData);
-      console.log('API request created:', response);
+      let response;
+      if (isEditMode && initialData && initialData.id) {
+        // Update existing API request
+        response = await apiRequestApi.updateApiRequest(initialData.id, formData);
+        console.log('API request updated:', response);
+        message.success('API request updated successfully!');
+      } else {
+        // Create new API request
+        response = await apiRequestApi.createApiRequest(formData);
+        console.log('API request created:', response);
+        message.success('API request created successfully!');
+      }
       
-      message.success('API request created successfully!');
-      
-      // Move to next step with the created request data
+      // Move to next step with the request data
       if (onNext) onNext({ 
         ...formData, 
         id: response.data.id,
         apiSource: apiSource
       });
     } catch (error) {
-      console.error('Failed to create API request:', error);
-      message.error('Failed to create API request: ' + error.message);
+      console.error(`Failed to ${isEditMode ? 'update' : 'create'} API request:`, error);
+      message.error(`Failed to ${isEditMode ? 'update' : 'create'} API request: ` + error.message);
     }
   };
 

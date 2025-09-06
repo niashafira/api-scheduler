@@ -15,6 +15,7 @@ import Settings from './pages/Settings';
 
 // Wizard
 import WizardContainer from './components/wizard/WizardContainer';
+import EditWizardContainer from './components/wizard/EditWizardContainer';
 
 function App() {
   return (
@@ -24,6 +25,7 @@ function App() {
           <Route index element={<Dashboard />} />
           <Route path="sources" element={<Sources />} />
           <Route path="sources/new" element={<WizardContainer />} />
+          <Route path="sources/edit/:id" element={<EditWizardContainer />} />
           <Route path="token-configs" element={<TokenConfigs />} />
           <Route path="schedules" element={<Schedules />} />
           <Route path="history" element={<History />} />

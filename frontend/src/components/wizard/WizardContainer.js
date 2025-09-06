@@ -3,6 +3,7 @@ import { Steps, Button, Card, Space, Typography } from 'antd';
 import { ArrowLeftOutlined, ApiOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import SourceStep from './SourceStep';
+import RequestStep from './RequestStep';
 
 const { Step } = Steps;
 const { Title } = Typography;
@@ -36,7 +37,14 @@ const WizardContainer = () => {
     {
       title: 'Request',
       description: 'Define Request',
-      content: <div>Request Step (Coming Soon)</div>
+      content: <RequestStep 
+        onNext={(data) => {
+          setWizardData({...wizardData, request: data});
+          setCurrentStep(currentStep + 1);
+        }}
+        onPrevious={() => setCurrentStep(currentStep - 1)}
+        sourceData={wizardData.source}
+      />
     },
     {
       title: 'Extract',

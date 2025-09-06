@@ -96,6 +96,37 @@ export const apiService = {
     };
 
     return await this.makeRequest(baseUrl, options);
+  },
+
+  async testCustomRequest(url, options = {}) {
+    try {
+      const response = await fetch(url, options);
+      
+      // Get response headers
+      const headers = {};
+      response.headers.forEach((value, key) => {
+        headers[key] = value;
+      });
+      
+      // Get response data
+      let data;
+      const contentType = response.headers.get('content-type');
+      if (contentType && contentType.includes('application/json')) {
+        data = await response.json();
+      } else {
+        data = await response.text();
+      }
+      
+      return {
+        status: response.status,
+        statusText: response.statusText,
+        headers,
+        data,
+        ok: response.ok
+      };
+    } catch (error) {
+      throw new Error(`Request failed: ${error.message}`);
+    }
   }
 };
 

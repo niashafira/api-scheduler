@@ -24,6 +24,7 @@ import {
 } from '@ant-design/icons';
 import { apiService, jsonPath } from '../../utils/apiService';
 import tokenConfigApi from '../../services/tokenConfigApi';
+import apiSourceApi from '../../services/apiSourceApi';
 
 const { Title, Text, Paragraph } = Typography;
 const { Option } = Select;
@@ -280,21 +281,35 @@ const SourceStep = ({ onNext, onPrevious }) => {
     };
   };
 
-  const handleSubmit = (values) => {
-    console.log('Form values:', values);
-    // Process form values and headers
-    const formData = {
-      ...values,
-      headers: headers.filter(h => h.key && h.value),
-      tokenConfig: authType === 'token' ? {
-        ...tokenConfig,
-        selectedConfigId: selectedTokenConfigId ? parseInt(selectedTokenConfigId, 10) : null
-      } : null,
-    };
-    console.log('Processed form data:', formData);
-    
-    // Move to next step
-    if (onNext) onNext(formData);
+  const handleSubmit = async (values) => {
+    try {
+      console.log('Form values:', values);
+      
+      // Process form values and headers
+      const formData = {
+        ...values,
+        headers: headers.filter(h => h.key && h.value),
+        tokenConfig: authType === 'token' ? {
+          ...tokenConfig,
+          selectedConfigId: selectedTokenConfigId ? parseInt(selectedTokenConfigId, 10) : null
+        } : null,
+      };
+      
+      console.log('Processed form data:', formData);
+      
+      // Create API source in backend
+      const response = await apiSourceApi.createApiSource(formData);
+      console.log('API source created:', response);
+      
+      message.success('API source created successfully!');
+      
+      // Move to next step with the created source data
+      if (onNext) onNext({ ...formData, id: response.data.id });
+      
+    } catch (error) {
+      console.error('Failed to create API source:', error);
+      message.error('Failed to create API source: ' + error.message);
+    }
   };
 
   return (

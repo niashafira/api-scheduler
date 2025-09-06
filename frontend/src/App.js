@@ -1,11 +1,15 @@
 import { Button, Layout, Typography, Space, Card } from 'antd';
 import { GithubOutlined, ApiOutlined, ScheduleOutlined } from '@ant-design/icons';
 import './App.css';
+import WizardContainer from './components/wizard/WizardContainer';
+import { useState } from 'react';
 
 const { Header, Content, Footer } = Layout;
 const { Title, Text } = Typography;
 
 function App() {
+  const [showWizard, setShowWizard] = useState(false);
+
   return (
     <Layout className="layout">
       <Header style={{ display: 'flex', alignItems: 'center' }}>
@@ -17,26 +21,33 @@ function App() {
           </Space>
         </Title>
       </Header>
-      <Content style={{ padding: '50px', minHeight: 'calc(100vh - 64px - 70px)' }}>
-        <div className="site-layout-content">
-          <Card title="Welcome to API Call Scheduler" style={{ width: '100%' }}>
-            <Typography>
-              <Title level={3}>Getting Started</Title>
-              <Text>This application helps you schedule and manage API calls efficiently.</Text>
-              
-              <div style={{ marginTop: '20px' }}>
-                <Space>
-                  <Button type="primary" icon={<ApiOutlined />}>
-                    View API Endpoints
-                  </Button>
-                  <Button icon={<ScheduleOutlined />}>
-                    Schedule New Call
-                  </Button>
-                </Space>
-              </div>
-            </Typography>
-          </Card>
-        </div>
+      <Content style={{ padding: '20px', minHeight: 'calc(100vh - 64px - 70px)' }}>
+        {showWizard ? (
+          <WizardContainer />
+        ) : (
+          <div className="site-layout-content">
+            <Card title="Welcome to API Call Scheduler" style={{ width: '100%' }}>
+              <Typography>
+                <Title level={3}>Getting Started</Title>
+                <Text>This application helps you schedule and manage API calls efficiently.</Text>
+                
+                <div style={{ marginTop: '20px' }}>
+                  <Space>
+                    <Button type="primary" icon={<ApiOutlined />}>
+                      View API Endpoints
+                    </Button>
+                    <Button 
+                      icon={<ScheduleOutlined />}
+                      onClick={() => setShowWizard(true)}
+                    >
+                      Schedule New Call
+                    </Button>
+                  </Space>
+                </div>
+              </Typography>
+            </Card>
+          </div>
+        )}
       </Content>
       <Footer style={{ textAlign: 'center' }}>
         API Call Scheduler ©{new Date().getFullYear()} Created with Ant Design

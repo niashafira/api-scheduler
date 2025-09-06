@@ -1,0 +1,58 @@
+{
+  "table_name": "customers",
+  "columns": [
+    {
+      "name": "first_name",
+      "type": "string",
+      "length": 50
+    },
+    {
+      "name": "last_name",
+      "type": "string",
+      "length": 50
+    },
+    {
+      "name": "email",
+      "type": "string",
+      "length": 100
+    },
+    {
+      "name": "phone",
+      "type": "string",
+      "length": 20,
+      "nullable": true
+    },
+    {
+      "name": "address",
+      "type": "text",
+      "nullable": true
+    },
+    {
+      "name": "date_of_birth",
+      "type": "date",
+      "nullable": true
+    },
+    {
+      "name": "is_active",
+      "type": "boolean",
+      "nullable": false
+    },
+    {
+      "name": "credit_limit",
+      "type": "decimal",
+      "precision": 10,
+      "scale": 2,
+      "nullable": true
+    },
+    {
+      "name": "preferences",
+      "type": "json",
+      "nullable": true
+    },
+    {
+      "name": "last_login",
+      "type": "date",
+      "nullable": true
+    }
+  ]
+}

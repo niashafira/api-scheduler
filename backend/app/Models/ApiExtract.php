@@ -16,7 +16,7 @@ class ApiExtract extends Model
         'root_array_path',
         'extraction_paths',
         'field_mappings',
-        'primary_key_field',
+        'primary_key_fields',
         'null_value_handling',
         'date_format',
         'transform_script',
@@ -27,6 +27,7 @@ class ApiExtract extends Model
     protected $casts = [
         'extraction_paths' => 'array',
         'field_mappings' => 'array',
+        'primary_key_fields' => 'array',
         'last_executed_at' => 'datetime',
     ];
 

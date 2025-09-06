@@ -46,7 +46,7 @@ const ExtractStep = ({ onNext, onPrevious, sourceData, requestData, initialData 
   const [extractionPreview, setExtractionPreview] = useState(null);
   const [extractionError, setExtractionError] = useState(null);
   const [rootArrayPath, setRootArrayPath] = useState('');
-  const [primaryKeyField, setPrimaryKeyField] = useState('');
+  const [primaryKeyFields, setPrimaryKeyFields] = useState([]);
   const [dataTypes] = useState([
     { value: 'string', label: 'String' },
     { value: 'number', label: 'Number' },
@@ -76,7 +76,6 @@ const ExtractStep = ({ onNext, onPrevious, sourceData, requestData, initialData 
     // Set form values
     form.setFieldsValue({
       name: initialData.name || '',
-      primaryKeyField: initialData.primary_key_field || '',
       nullValueHandling: initialData.null_value_handling || 'keep',
       dateFormat: initialData.date_format || '',
       transformScript: initialData.transform_script || ''
@@ -84,7 +83,7 @@ const ExtractStep = ({ onNext, onPrevious, sourceData, requestData, initialData 
 
     // Set extraction configuration
     setRootArrayPath(initialData.root_array_path || '');
-    setPrimaryKeyField(initialData.primary_key_field || '');
+    setPrimaryKeyFields(initialData.primary_key_fields || []);
 
     // Set extraction paths
     if (initialData.extraction_paths && Array.isArray(initialData.extraction_paths)) {
@@ -440,7 +439,7 @@ const ExtractStep = ({ onNext, onPrevious, sourceData, requestData, initialData 
         // If we found an ID field, set it as primary key
         const idField = updatedPaths.find(p => p.name === 'id');
         if (idField) {
-          form.setFieldsValue({ primaryKeyField: 'id' });
+          setPrimaryKeyFields(['id']);
         }
       } else {
         // Default extraction path
@@ -474,6 +473,24 @@ const ExtractStep = ({ onNext, onPrevious, sourceData, requestData, initialData 
     const updatedPaths = [...extractionPaths];
     updatedPaths[index][field] = value;
     setExtractionPaths(updatedPaths);
+  };
+
+  const addPrimaryKeyField = (fieldName) => {
+    if (fieldName && !primaryKeyFields.includes(fieldName)) {
+      setPrimaryKeyFields([...primaryKeyFields, fieldName]);
+    }
+  };
+
+  const removePrimaryKeyField = (fieldName) => {
+    setPrimaryKeyFields(primaryKeyFields.filter(field => field !== fieldName));
+  };
+
+  const togglePrimaryKeyField = (fieldName) => {
+    if (primaryKeyFields.includes(fieldName)) {
+      removePrimaryKeyField(fieldName);
+    } else {
+      addPrimaryKeyField(fieldName);
+    }
   };
 
   const testExtraction = (path, index) => {
@@ -544,6 +561,11 @@ const ExtractStep = ({ onNext, onPrevious, sourceData, requestData, initialData 
         message.error('At least one extraction path must be defined');
         return;
       }
+
+      if (primaryKeyFields.length === 0) {
+        message.error('At least one primary key field must be selected');
+        return;
+      }
       
       // Process form values
       const formData = {
@@ -551,7 +573,7 @@ const ExtractStep = ({ onNext, onPrevious, sourceData, requestData, initialData 
         name: values.name,
         rootArrayPath: rootArrayPath,
         extractionPaths: filteredPaths,
-        primaryKeyField: values.primaryKeyField,
+        primaryKeyFields: primaryKeyFields,
         nullValueHandling: values.nullValueHandling || 'keep',
         dateFormat: values.dateFormat,
         transformScript: values.transformScript,
@@ -823,28 +845,45 @@ const ExtractStep = ({ onNext, onPrevious, sourceData, requestData, initialData 
               </Form.Item>
               
               <Form.Item
-                name="primaryKeyField"
                 label={
                   <span>
-                    Primary Key Field
-                    <Tooltip title="The field to use as the unique identifier for each record">
+                    Primary Key Fields
+                    <Tooltip title="Select one or more fields to use as composite primary key for uniqueness. This helps avoid duplicate records when saving data.">
                       <QuestionCircleOutlined style={{ marginLeft: 8 }} />
                     </Tooltip>
                   </span>
                 }
               >
-                <Select 
-                  placeholder="Select a field to use as primary key"
-                  value={primaryKeyField}
-                  onChange={(value) => setPrimaryKeyField(value)}
-                  allowClear
-                >
+                <div style={{ marginBottom: 8 }}>
+                  <Text type="secondary">
+                    Select fields that together form a unique identifier (e.g., year + month, id + type, etc.)
+                  </Text>
+                </div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
                   {extractionPaths.filter(p => p.name).map((path, index) => (
-                    <Option key={index} value={path.name}>
-                      {path.name} {path.required && <Tag color="blue" style={{marginLeft: 4}}>Required</Tag>}
-                    </Option>
+                    <div key={index} style={{ display: 'flex', alignItems: 'center' }}>
+                      <Switch
+                        checked={primaryKeyFields.includes(path.name)}
+                        onChange={() => togglePrimaryKeyField(path.name)}
+                        style={{ marginRight: 8 }}
+                      />
+                      <Tag 
+                        color={primaryKeyFields.includes(path.name) ? 'blue' : 'default'}
+                        style={{ cursor: 'pointer' }}
+                        onClick={() => togglePrimaryKeyField(path.name)}
+                      >
+                        {path.name}
+                        {path.required && <span style={{ marginLeft: 4 }}>*</span>}
+                      </Tag>
+                    </div>
                   ))}
-                </Select>
+                </div>
+                {primaryKeyFields.length > 0 && (
+                  <div style={{ marginTop: 8 }}>
+                    <Text strong>Selected Primary Key Fields: </Text>
+                    <Text code>{primaryKeyFields.join(' + ')}</Text>
+                  </div>
+                )}
               </Form.Item>
               
               <Divider orientation="left">Field Mappings</Divider>

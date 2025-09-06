@@ -18,7 +18,7 @@ return new class extends Migration
             $table->string('root_array_path')->nullable();
             $table->json('extraction_paths');
             $table->json('field_mappings')->nullable();
-            $table->string('primary_key_field')->nullable();
+            $table->json('primary_key_fields')->nullable();
             $table->enum('null_value_handling', ['keep', 'empty', 'default'])->default('keep');
             $table->string('date_format')->nullable();
             $table->text('transform_script')->nullable();

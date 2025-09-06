@@ -19,18 +19,14 @@ function App() {
   return (
     <Router>
       <Routes>
-        <Route path="/wizard" element={<WizardContainer />} />
-        <Route path="/" element={
-          <MainLayout>
-            <Routes>
-              <Route index element={<Dashboard />} />
-              <Route path="sources" element={<Sources />} />
-              <Route path="schedules" element={<Schedules />} />
-              <Route path="history" element={<History />} />
-              <Route path="settings" element={<Settings />} />
-            </Routes>
-          </MainLayout>
-        } />
+        <Route path="/" element={<MainLayout />}>
+          <Route index element={<Dashboard />} />
+          <Route path="sources" element={<Sources />} />
+          <Route path="sources/new" element={<WizardContainer />} />
+          <Route path="schedules" element={<Schedules />} />
+          <Route path="history" element={<History />} />
+          <Route path="settings" element={<Settings />} />
+        </Route>
       </Routes>
     </Router>
   );

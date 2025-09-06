@@ -9,12 +9,12 @@ import {
   MenuFoldOutlined,
   MenuUnfoldOutlined
 } from '@ant-design/icons';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, Outlet } from 'react-router-dom';
 
 const { Header, Sider, Content, Footer } = Layout;
 const { Title } = Typography;
 
-const MainLayout = ({ children }) => {
+const MainLayout = () => {
   const [collapsed, setCollapsed] = useState(false);
   const location = useLocation();
   const { token } = theme.useToken();
@@ -103,7 +103,7 @@ const MainLayout = ({ children }) => {
           borderRadius: token.borderRadiusLG,
           minHeight: 280 
         }}>
-          {children}
+          <Outlet />
         </Content>
         <Footer style={{ textAlign: 'center' }}>
           API Call Scheduler ©{new Date().getFullYear()} Created with Ant Design

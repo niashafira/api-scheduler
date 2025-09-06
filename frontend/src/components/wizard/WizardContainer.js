@@ -1,10 +1,14 @@
 import React, { useState } from 'react';
-import { Steps } from 'antd';
+import { Steps, Button, Card, Space, Typography } from 'antd';
+import { ArrowLeftOutlined, ApiOutlined } from '@ant-design/icons';
+import { useNavigate } from 'react-router-dom';
 import SourceStep from './SourceStep';
 
 const { Step } = Steps;
+const { Title } = Typography;
 
 const WizardContainer = () => {
+  const navigate = useNavigate();
   const [currentStep, setCurrentStep] = useState(0);
   const [wizardData, setWizardData] = useState({
     source: {},
@@ -76,16 +80,40 @@ const WizardContainer = () => {
     }
   ];
 
+  const handleBack = () => {
+    if (currentStep === 0) {
+      navigate('/sources');
+    } else {
+      setCurrentStep(currentStep - 1);
+    }
+  };
+
   return (
     <div style={{ padding: '20px' }}>
-      <Steps current={currentStep} size="small" style={{ marginBottom: '40px' }}>
-        {steps.map(item => (
-          <Step key={item.title} title={item.title} description={item.description} />
-        ))}
-      </Steps>
-      <div className="steps-content">
-        {steps[currentStep].content}
-      </div>
+      <Card 
+        title={
+          <Space>
+            <Button 
+              icon={<ArrowLeftOutlined />} 
+              onClick={handleBack}
+              style={{ marginRight: '10px' }}
+            />
+            <Title level={4} style={{ margin: 0 }}>
+              <ApiOutlined /> Create API Source
+            </Title>
+          </Space>
+        }
+        style={{ marginBottom: '20px' }}
+      >
+        <Steps current={currentStep} size="small" style={{ marginBottom: '40px' }}>
+          {steps.map(item => (
+            <Step key={item.title} title={item.title} description={item.description} />
+          ))}
+        </Steps>
+        <div className="steps-content">
+          {steps[currentStep].content}
+        </div>
+      </Card>
     </div>
   );
 };

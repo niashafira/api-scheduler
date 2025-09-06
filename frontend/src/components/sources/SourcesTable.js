@@ -69,7 +69,7 @@ const SourcesTable = () => {
   const [sourceToDelete, setSourceToDelete] = useState(null);
 
   const handleCreateSource = () => {
-    navigate('/wizard');
+    navigate('/sources/new');
   };
 
   const handleEditSource = (id) => {

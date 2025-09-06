@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\API\DynamicTableController;
+use App\Http\Controllers\TokenConfigController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -19,5 +20,19 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
     return $request->user();
 });
 
+// Test CORS endpoint
+Route::get('/test-cors', function () {
+    return response()->json([
+        'success' => true,
+        'message' => 'CORS is working!',
+        'timestamp' => now()
+    ]);
+});
+
 // Dynamic Table Routes
 Route::post('/tables', [DynamicTableController::class, 'createTable']);
+
+// Token Configuration Routes
+Route::apiResource('token-configs', TokenConfigController::class);
+Route::get('/token-configs/active', [TokenConfigController::class, 'active']);
+Route::post('/token-configs/{id}/mark-used', [TokenConfigController::class, 'markAsUsed']);

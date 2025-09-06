@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Table, Button, Space, Tag, Tooltip, Modal, Typography } from 'antd';
+import React, { useState, useEffect } from 'react';
+import { Table, Button, Space, Tag, Tooltip, Modal, Typography, message } from 'antd';
 import { 
   PlusOutlined, 
   EditOutlined, 
@@ -11,56 +11,9 @@ import {
 } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import TokenConfigForm from './TokenConfigForm';
+import tokenConfigApi from '../../services/tokenConfigApi';
 
 const { Title, Text } = Typography;
-
-// Mock data for demonstration
-const mockData = [
-  {
-    id: '1',
-    name: 'OAuth 2.0 Client Credentials',
-    endpoint: 'https://api.example.com/oauth/token',
-    method: 'POST',
-    status: 'active',
-    lastUsed: '2023-08-15T10:30:00',
-    createdAt: '2023-07-01T14:22:00',
-    tokenPath: 'access_token',
-    expiresInPath: 'expires_in',
-  },
-  {
-    id: '2',
-    name: 'Custom API Authentication',
-    endpoint: 'https://api.myservice.com/auth/login',
-    method: 'POST',
-    status: 'active',
-    lastUsed: '2023-08-14T16:45:00',
-    createdAt: '2023-06-15T09:10:00',
-    tokenPath: 'data.token',
-    expiresInPath: 'data.expires_in',
-  },
-  {
-    id: '3',
-    name: 'JWT Token Service',
-    endpoint: 'https://jwt.example.com/token',
-    method: 'POST',
-    status: 'inactive',
-    lastUsed: '2023-07-20T11:15:00',
-    createdAt: '2023-05-10T13:40:00',
-    tokenPath: 'jwt',
-    expiresInPath: 'expires_in',
-  },
-  {
-    id: '4',
-    name: 'API Gateway Auth',
-    endpoint: 'https://gateway.example.com/auth',
-    method: 'POST',
-    status: 'active',
-    lastUsed: '2023-08-10T09:20:00',
-    createdAt: '2023-04-22T10:30:00',
-    tokenPath: 'access_token',
-    expiresInPath: 'expires_in',
-  },
-];
 
 const TokenConfigsTable = () => {
   const navigate = useNavigate();
@@ -70,6 +23,26 @@ const TokenConfigsTable = () => {
   const [configToDelete, setConfigToDelete] = useState(null);
   const [formModalVisible, setFormModalVisible] = useState(false);
   const [editingConfig, setEditingConfig] = useState(null);
+  const [tokenConfigs, setTokenConfigs] = useState([]);
+  const [tableLoading, setTableLoading] = useState(true);
+
+  // Load token configurations on component mount
+  useEffect(() => {
+    loadTokenConfigs();
+  }, []);
+
+  const loadTokenConfigs = async () => {
+    try {
+      setTableLoading(true);
+      const response = await tokenConfigApi.getAllTokenConfigs();
+      setTokenConfigs(response.data || []);
+    } catch (error) {
+      console.error('Failed to load token configurations:', error);
+      message.error('Failed to load token configurations');
+    } finally {
+      setTableLoading(false);
+    }
+  };
 
   const handleCreateConfig = () => {
     setEditingConfig(null);
@@ -91,22 +64,38 @@ const TokenConfigsTable = () => {
     setDeleteModalVisible(true);
   };
 
-  const handleDeleteConfirm = () => {
-    setLoading(true);
-    // Simulate API call
-    setTimeout(() => {
-      console.log('Deleted token config:', configToDelete);
-      setLoading(false);
+  const handleDeleteConfirm = async () => {
+    try {
+      setLoading(true);
+      await tokenConfigApi.deleteTokenConfig(configToDelete.id);
+      message.success('Token configuration deleted successfully');
       setDeleteModalVisible(false);
       setConfigToDelete(null);
-    }, 1000);
+      loadTokenConfigs(); // Reload the list
+    } catch (error) {
+      console.error('Failed to delete token configuration:', error);
+      message.error('Failed to delete token configuration');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleFormSubmit = (formData) => {
-    console.log('Token config submitted:', formData);
-    setFormModalVisible(false);
-    setEditingConfig(null);
-    // Here you would typically save to backend
+  const handleFormSubmit = async (formData) => {
+    try {
+      if (editingConfig) {
+        await tokenConfigApi.updateTokenConfig(editingConfig.id, formData);
+        message.success('Token configuration updated successfully');
+      } else {
+        await tokenConfigApi.createTokenConfig(formData);
+        message.success('Token configuration created successfully');
+      }
+      setFormModalVisible(false);
+      setEditingConfig(null);
+      loadTokenConfigs(); // Reload the list
+    } catch (error) {
+      console.error('Failed to save token configuration:', error);
+      message.error('Failed to save token configuration');
+    }
   };
 
   const columns = [
@@ -137,8 +126,8 @@ const TokenConfigsTable = () => {
     },
     {
       title: 'Token Path',
-      dataIndex: 'tokenPath',
-      key: 'tokenPath',
+      dataIndex: 'token_path',
+      key: 'token_path',
       render: (path) => <Text code>{path}</Text>,
     },
     {
@@ -158,17 +147,22 @@ const TokenConfigsTable = () => {
     },
     {
       title: 'Last Used',
-      dataIndex: 'lastUsed',
-      key: 'lastUsed',
-      render: (date) => new Date(date).toLocaleString(),
-      sorter: (a, b) => new Date(a.lastUsed) - new Date(b.lastUsed),
+      dataIndex: 'last_used_at',
+      key: 'last_used_at',
+      render: (date) => date ? new Date(date).toLocaleString() : 'Never',
+      sorter: (a, b) => {
+        if (!a.last_used_at && !b.last_used_at) return 0;
+        if (!a.last_used_at) return 1;
+        if (!b.last_used_at) return -1;
+        return new Date(a.last_used_at) - new Date(b.last_used_at);
+      },
     },
     {
       title: 'Created',
-      dataIndex: 'createdAt',
-      key: 'createdAt',
+      dataIndex: 'created_at',
+      key: 'created_at',
       render: (date) => new Date(date).toLocaleDateString(),
-      sorter: (a, b) => new Date(a.createdAt) - new Date(b.createdAt),
+      sorter: (a, b) => new Date(a.created_at) - new Date(b.created_at),
     },
     {
       title: 'Actions',
@@ -223,8 +217,9 @@ const TokenConfigsTable = () => {
       <Table 
         rowSelection={rowSelection}
         columns={columns} 
-        dataSource={mockData}
+        dataSource={tokenConfigs}
         rowKey="id"
+        loading={tableLoading}
         pagination={{ pageSize: 10 }}
       />
 

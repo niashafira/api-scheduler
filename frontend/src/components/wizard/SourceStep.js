@@ -7,13 +7,10 @@ import {
   Select, 
   Space, 
   Typography, 
-  Divider, 
+  Divider,
   Switch,
   message,
   Tabs,
-  Collapse,
-  InputNumber,
-  Radio,
   Alert,
   Steps
 } from 'antd';
@@ -23,9 +20,7 @@ import {
   LockOutlined, 
   ApiOutlined,
   CheckCircleOutlined,
-  CloseCircleOutlined,
-  KeyOutlined,
-  SettingOutlined
+  CloseCircleOutlined
 } from '@ant-design/icons';
 import { apiService, jsonPath } from '../../utils/apiService';
 import tokenConfigApi from '../../services/tokenConfigApi';
@@ -33,7 +28,6 @@ import tokenConfigApi from '../../services/tokenConfigApi';
 const { Title, Text, Paragraph } = Typography;
 const { Option } = Select;
 const { TabPane } = Tabs;
-const { Panel } = Collapse;
 const { Step } = Steps;
 
 const SourceStep = ({ onNext, onPrevious }) => {
@@ -138,24 +132,6 @@ const SourceStep = ({ onNext, onPrevious }) => {
     }
   };
 
-  const addTokenHeader = () => {
-    setTokenConfig({
-      ...tokenConfig,
-      headers: [...tokenConfig.headers, { key: '', value: '' }]
-    });
-  };
-
-  const removeTokenHeader = (index) => {
-    const updatedHeaders = [...tokenConfig.headers];
-    updatedHeaders.splice(index, 1);
-    setTokenConfig({...tokenConfig, headers: updatedHeaders});
-  };
-
-  const updateTokenHeader = (index, field, value) => {
-    const updatedHeaders = [...tokenConfig.headers];
-    updatedHeaders[index][field] = value;
-    setTokenConfig({...tokenConfig, headers: updatedHeaders});
-  };
 
   const addHeader = () => {
     setHeaders([...headers, { key: '', value: '' }]);
@@ -185,12 +161,9 @@ const SourceStep = ({ onNext, onPrevious }) => {
       }
       
       if (authType === 'token' && tokenConfig.enabled) {
-        // Validate token configuration
-        if (!tokenConfig.endpoint) {
-          throw new Error('Token endpoint is required for token-based authentication');
-        }
-        if (!tokenConfig.tokenPath) {
-          throw new Error('Token field path is required');
+        // Validate token configuration selection
+        if (!selectedTokenConfigId) {
+          throw new Error('Please select a token configuration');
         }
         
         // Step 1: Test token acquisition
@@ -433,256 +406,44 @@ const SourceStep = ({ onNext, onPrevious }) => {
             )}
 
             {authType === 'token' && (
-              <Collapse defaultActiveKey={['1', '2']} ghost>
-                <Panel 
-                  header={
-                    <Space>
-                      <KeyOutlined />
-                      <Text strong>Use Existing Token Configuration</Text>
-                    </Space>
-                  } 
-                  key="0"
+              <Card style={{ marginTop: 16 }}>
+                <Form.Item
+                  name="existingTokenConfig"
+                  label="Select Token Configuration"
+                  rules={[{ required: true, message: 'Please select a token configuration' }]}
                 >
-                  <Form.Item
-                    name="existingTokenConfig"
-                    label="Select Token Configuration"
+                  <Select 
+                    placeholder="Select a token configuration"
+                    value={selectedTokenConfigId}
+                    onChange={handleTokenConfigSelect}
+                    loading={loadingTokenConfigs}
+                    allowClear
                   >
-                    <Select 
-                      placeholder="Select a token configuration"
-                      value={selectedTokenConfigId}
-                      onChange={handleTokenConfigSelect}
-                      loading={loadingTokenConfigs}
-                      allowClear
-                    >
-                      {existingTokenConfigs.map((config) => (
-                        <Option key={config.id} value={config.id}>
-                          {config.name}
-                        </Option>
-                      ))}
-                    </Select>
-                  </Form.Item>
-                  
-                  <Alert
-                    message="Using Existing Configuration"
-                    description={
-                      <div>
-                        This will use a pre-configured token configuration. You can still test the connection below.
-                        <br />
-                        <a href="/token-configs" target="_blank" rel="noopener noreferrer">
-                          Manage Token Configurations
-                        </a>
-                      </div>
-                    }
-                    type="info"
-                    style={{ marginTop: 8 }}
-                  />
-                </Panel>
-                <Panel 
-                  header={
-                    <Space>
-                      <KeyOutlined />
-                      <Text strong>Token Configuration</Text>
-                    </Space>
-                  } 
-                  key="1"
-                >
-                  <Form.Item
-                    name="tokenEndpoint"
-                    label="Token Endpoint URL"
-                    rules={[{ required: true, message: 'Please enter the token endpoint URL' }]}
-                  >
-                    <Input 
-                      placeholder="https://api.example.com/oauth/token" 
-                      prefix={<LinkOutlined />}
-                      value={tokenConfig.endpoint}
-                      onChange={(e) => setTokenConfig({...tokenConfig, endpoint: e.target.value})}
-                    />
-                  </Form.Item>
-
-                  <Form.Item
-                    name="tokenMethod"
-                    label="Request Method"
-                  >
-                    <Radio.Group 
-                      value={tokenConfig.method}
-                      onChange={(e) => setTokenConfig({...tokenConfig, method: e.target.value})}
-                    >
-                      <Radio value="POST">POST</Radio>
-                      <Radio value="GET">GET</Radio>
-                      <Radio value="PUT">PUT</Radio>
-                    </Radio.Group>
-                  </Form.Item>
-
-                  <Divider orientation="left">Token Request Headers</Divider>
-                  
-                  {tokenConfig.headers.map((header, index) => (
-                    <Space key={index} style={{ display: 'flex', marginBottom: 8 }} align="baseline">
-                      <Input
-                        placeholder="Header Key"
-                        value={header.key}
-                        onChange={(e) => updateTokenHeader(index, 'key', e.target.value)}
-                        style={{ width: 200 }}
-                      />
-                      <Input
-                        placeholder="Header Value"
-                        value={header.value}
-                        onChange={(e) => updateTokenHeader(index, 'value', e.target.value)}
-                        style={{ width: 200 }}
-                      />
-                      {tokenConfig.headers.length > 1 && (
-                        <Button 
-                          type="text" 
-                          danger 
-                          onClick={() => removeTokenHeader(index)}
-                          icon={<CloseCircleOutlined />}
-                        />
-                      )}
-                    </Space>
-                  ))}
-                  
-                  <Form.Item>
-                    <Button 
-                      type="dashed" 
-                      onClick={addTokenHeader} 
-                      block 
-                      icon={<PlusOutlined />}
-                    >
-                      Add Header
-                    </Button>
-                  </Form.Item>
-
-                  <Form.Item
-                    name="tokenBody"
-                    label="Request Body (JSON)"
-                    tooltip="JSON body for token request. Use {{variable}} for dynamic values."
-                  >
-                    <Input.TextArea 
-                      rows={4}
-                      placeholder='{"grant_type": "client_credentials", "client_id": "{{client_id}}", "client_secret": "{{client_secret}}"}'
-                      value={tokenConfig.body}
-                      onChange={(e) => setTokenConfig({...tokenConfig, body: e.target.value})}
-                    />
-                  </Form.Item>
-
-                  <Divider orientation="left">Token Response Configuration</Divider>
-
-                  <Form.Item
-                    name="tokenPath"
-                    label="Token Field Path"
-                    tooltip="JSON path to access token in response (e.g., access_token, data.token)"
-                  >
-                    <Input 
-                      placeholder="access_token"
-                      value={tokenConfig.tokenPath}
-                      onChange={(e) => setTokenConfig({...tokenConfig, tokenPath: e.target.value})}
-                    />
-                  </Form.Item>
-
-                  <Form.Item
-                    name="expiresInPath"
-                    label="Expires In Field Path"
-                    tooltip="JSON path to token expiration time in response (e.g., expires_in, data.expires_in)"
-                  >
-                    <Input 
-                      placeholder="expires_in"
-                      value={tokenConfig.expiresInPath}
-                      onChange={(e) => setTokenConfig({...tokenConfig, expiresInPath: e.target.value})}
-                    />
-                  </Form.Item>
-
-                  <Form.Item
-                    name="expiresIn"
-                    label="Default Expires In (seconds)"
-                    tooltip="Default token expiration time if not provided in response"
-                  >
-                    <InputNumber 
-                      min={60}
-                      max={86400}
-                      value={tokenConfig.expiresIn}
-                      onChange={(value) => setTokenConfig({...tokenConfig, expiresIn: value})}
-                      style={{ width: '100%' }}
-                    />
-                  </Form.Item>
-
-                  <Form.Item
-                    name="refreshTokenPath"
-                    label="Refresh Token Field Path (Optional)"
-                    tooltip="JSON path to refresh token in response"
-                  >
-                    <Input 
-                      placeholder="refresh_token"
-                      value={tokenConfig.refreshTokenPath}
-                      onChange={(e) => setTokenConfig({...tokenConfig, refreshTokenPath: e.target.value})}
-                    />
-                  </Form.Item>
-
-                  <Form.Item
-                    name="refreshEnabled"
-                    label="Enable Token Refresh"
-                    valuePropName="checked"
-                    tooltip="Automatically refresh token when it expires"
-                  >
-                    <Switch 
-                      checked={tokenConfig.refreshEnabled}
-                      onChange={(checked) => setTokenConfig({...tokenConfig, refreshEnabled: checked})}
-                    />
-                  </Form.Item>
-                </Panel>
+                    {existingTokenConfigs.map((config) => (
+                      <Option key={config.id} value={config.id}>
+                        {config.name}
+                      </Option>
+                    ))}
+                  </Select>
+                </Form.Item>
                 
-                <Panel 
-                  header={
-                    <Space>
-                      <SettingOutlined />
-                      <Text strong>Configuration Examples</Text>
-                    </Space>
-                  } 
-                  key="2"
-                >
-                  <Alert
-                    message="Common Token Configuration Examples"
-                    description="Here are some common patterns for token-based authentication:"
-                    type="info"
-                    style={{ marginBottom: 16 }}
-                  />
-                  
-                  <Space direction="vertical" style={{ width: '100%' }}>
-                    <Card size="small" title="OAuth 2.0 Client Credentials" style={{ marginBottom: 8 }}>
-                      <Space direction="vertical" style={{ width: '100%' }}>
-                        <div><Text strong>Endpoint:</Text> <Text code>https://api.example.com/oauth/token</Text></div>
-                        <div><Text strong>Method:</Text> <Text code>POST</Text></div>
-                        <div><Text strong>Headers:</Text> <Text code>Content-Type: application/json</Text></div>
-                        <div><Text strong>Body:</Text></div>
-                        <pre style={{ background: '#f5f5f5', padding: '8px', borderRadius: '4px', fontSize: '12px' }}>
-{`{
-  "grant_type": "client_credentials",
-  "client_id": "your_client_id",
-  "client_secret": "your_client_secret"
-}`}
-                        </pre>
-                        <div><Text strong>Token Path:</Text> <Text code>access_token</Text></div>
-                        <div><Text strong>Expires Path:</Text> <Text code>expires_in</Text></div>
-                      </Space>
-                    </Card>
-                    
-                    <Card size="small" title="Custom API Token" style={{ marginBottom: 8 }}>
-                      <Space direction="vertical" style={{ width: '100%' }}>
-                        <div><Text strong>Endpoint:</Text> <Text code>https://api.example.com/auth/login</Text></div>
-                        <div><Text strong>Method:</Text> <Text code>POST</Text></div>
-                        <div><Text strong>Headers:</Text> <Text code>Content-Type: application/json</Text></div>
-                        <div><Text strong>Body:</Text></div>
-                        <pre style={{ background: '#f5f5f5', padding: '8px', borderRadius: '4px', fontSize: '12px' }}>
-{`{
-  "username": "your_username",
-  "password": "your_password"
-}`}
-                        </pre>
-                        <div><Text strong>Token Path:</Text> <Text code>data.token</Text></div>
-                        <div><Text strong>Expires Path:</Text> <Text code>data.expires_in</Text></div>
-                      </Space>
-                    </Card>
-                  </Space>
-                </Panel>
-              </Collapse>
+                <Alert
+                  message="Token Configuration Required"
+                  description={
+                    <div>
+                      Please select an existing token configuration or create a new one.
+                      <br />
+                      <a href="/token-configs" target="_blank" rel="noopener noreferrer">
+                        <Button type="link" size="small" style={{ padding: 0 }}>
+                          Manage Token Configurations →
+                        </Button>
+                      </a>
+                    </div>
+                  }
+                  type="info"
+                  style={{ marginTop: 8 }}
+                />
+              </Card>
             )}
 
             {authType === 'oauth2' && (

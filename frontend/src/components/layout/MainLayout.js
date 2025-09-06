@@ -7,7 +7,8 @@ import {
   HistoryOutlined,
   SettingOutlined,
   MenuFoldOutlined,
-  MenuUnfoldOutlined
+  MenuUnfoldOutlined,
+  KeyOutlined
 } from '@ant-design/icons';
 import { Link, useLocation, Outlet } from 'react-router-dom';
 
@@ -29,6 +30,11 @@ const MainLayout = () => {
       key: '/sources',
       icon: <ApiOutlined />,
       label: <Link to="/sources">API Sources</Link>,
+    },
+    {
+      key: '/token-configs',
+      icon: <KeyOutlined />,
+      label: <Link to="/token-configs">Token Configs</Link>,
     },
     {
       key: '/schedules',

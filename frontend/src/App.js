@@ -8,6 +8,7 @@ import MainLayout from './components/layout/MainLayout';
 // Pages
 import Dashboard from './pages/Dashboard';
 import Sources from './pages/Sources';
+import TokenConfigs from './pages/TokenConfigs';
 import Schedules from './pages/Schedules';
 import History from './pages/History';
 import Settings from './pages/Settings';
@@ -23,6 +24,7 @@ function App() {
           <Route index element={<Dashboard />} />
           <Route path="sources" element={<Sources />} />
           <Route path="sources/new" element={<WizardContainer />} />
+          <Route path="token-configs" element={<TokenConfigs />} />
           <Route path="schedules" element={<Schedules />} />
           <Route path="history" element={<History />} />
           <Route path="settings" element={<Settings />} />

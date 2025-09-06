@@ -364,6 +364,42 @@ const SourceStep = ({ onNext, onPrevious }) => {
                   header={
                     <Space>
                       <KeyOutlined />
+                      <Text strong>Use Existing Token Configuration</Text>
+                    </Space>
+                  } 
+                  key="0"
+                >
+                  <Form.Item
+                    name="existingTokenConfig"
+                    label="Select Token Configuration"
+                  >
+                    <Select placeholder="Select a token configuration">
+                      <Option value="config1">OAuth 2.0 Client Credentials</Option>
+                      <Option value="config2">Custom API Authentication</Option>
+                      <Option value="config3">JWT Token Service</Option>
+                      <Option value="config4">API Gateway Auth</Option>
+                    </Select>
+                  </Form.Item>
+                  
+                  <Alert
+                    message="Using Existing Configuration"
+                    description={
+                      <div>
+                        This will use a pre-configured token configuration. You can still test the connection below.
+                        <br />
+                        <a href="/token-configs" target="_blank" rel="noopener noreferrer">
+                          Manage Token Configurations
+                        </a>
+                      </div>
+                    }
+                    type="info"
+                    style={{ marginTop: 8 }}
+                  />
+                </Panel>
+                <Panel 
+                  header={
+                    <Space>
+                      <KeyOutlined />
                       <Text strong>Token Configuration</Text>
                     </Space>
                   } 

@@ -10,7 +10,10 @@ import {
   Divider, 
   Switch,
   message,
-  Tabs
+  Tabs,
+  Collapse,
+  InputNumber,
+  Radio
 } from 'antd';
 import { 
   PlusOutlined, 
@@ -18,12 +21,16 @@ import {
   LockOutlined, 
   ApiOutlined,
   CheckCircleOutlined,
-  CloseCircleOutlined
+  CloseCircleOutlined,
+  KeyOutlined,
+  ClockCircleOutlined,
+  SettingOutlined
 } from '@ant-design/icons';
 
 const { Title, Text, Paragraph } = Typography;
 const { Option } = Select;
 const { TabPane } = Tabs;
+const { Panel } = Collapse;
 
 const SourceStep = ({ onNext, onPrevious }) => {
   const [form] = Form.useForm();
@@ -32,9 +39,45 @@ const SourceStep = ({ onNext, onPrevious }) => {
   const [testingConnection, setTestingConnection] = useState(false);
   const [testResult, setTestResult] = useState(null);
   const [activeTab, setActiveTab] = useState('create');
+  const [tokenConfig, setTokenConfig] = useState({
+    enabled: false,
+    endpoint: '',
+    method: 'POST',
+    headers: [{ key: '', value: '' }],
+    body: '',
+    tokenPath: 'access_token',
+    expiresInPath: 'expires_in',
+    refreshTokenPath: 'refresh_token',
+    expiresIn: 3600,
+    refreshEnabled: false
+  });
 
   const handleAuthTypeChange = (value) => {
     setAuthType(value);
+    if (value === 'token') {
+      setTokenConfig({...tokenConfig, enabled: true});
+    } else {
+      setTokenConfig({...tokenConfig, enabled: false});
+    }
+  };
+
+  const addTokenHeader = () => {
+    setTokenConfig({
+      ...tokenConfig,
+      headers: [...tokenConfig.headers, { key: '', value: '' }]
+    });
+  };
+
+  const removeTokenHeader = (index) => {
+    const updatedHeaders = [...tokenConfig.headers];
+    updatedHeaders.splice(index, 1);
+    setTokenConfig({...tokenConfig, headers: updatedHeaders});
+  };
+
+  const updateTokenHeader = (index, field, value) => {
+    const updatedHeaders = [...tokenConfig.headers];
+    updatedHeaders[index][field] = value;
+    setTokenConfig({...tokenConfig, headers: updatedHeaders});
   };
 
   const addHeader = () => {
@@ -56,11 +99,16 @@ const SourceStep = ({ onNext, onPrevious }) => {
   const testConnection = async () => {
     try {
       setTestingConnection(true);
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1500));
       
-      // For demo purposes, let's simulate a successful connection
-      setTestResult({ success: true, message: 'Connection successful!' });
+      if (authType === 'token' && tokenConfig.enabled) {
+        // Test token acquisition
+        await testTokenAcquisition();
+      } else {
+        // Test regular connection
+        await testRegularConnection();
+      }
+      
+      setTestResult({ success: true, message: 'Connection test successful!' });
       message.success('Connection test successful!');
     } catch (error) {
       setTestResult({ success: false, message: 'Connection failed: ' + error.message });
@@ -70,12 +118,34 @@ const SourceStep = ({ onNext, onPrevious }) => {
     }
   };
 
+  const testTokenAcquisition = async () => {
+    // Simulate token acquisition test
+    await new Promise(resolve => setTimeout(resolve, 2000));
+    
+    // In a real implementation, this would make an actual API call
+    console.log('Testing token acquisition with config:', tokenConfig);
+    
+    // Simulate success/failure based on configuration
+    if (!tokenConfig.endpoint) {
+      throw new Error('Token endpoint is required');
+    }
+  };
+
+  const testRegularConnection = async () => {
+    // Simulate regular connection test
+    await new Promise(resolve => setTimeout(resolve, 1500));
+    
+    // In a real implementation, this would make an actual API call
+    console.log('Testing regular connection');
+  };
+
   const handleSubmit = (values) => {
     console.log('Form values:', values);
     // Process form values and headers
     const formData = {
       ...values,
       headers: headers.filter(h => h.key && h.value),
+      tokenConfig: authType === 'token' ? tokenConfig : null,
     };
     console.log('Processed form data:', formData);
     
@@ -128,6 +198,7 @@ const SourceStep = ({ onNext, onPrevious }) => {
                 <Option value="basic">Basic Auth</Option>
                 <Option value="bearer">Bearer Token</Option>
                 <Option value="apiKey">API Key</Option>
+                <Option value="token">Token-based (Dynamic)</Option>
                 <Option value="oauth2">OAuth 2.0</Option>
               </Select>
             </Form.Item>
@@ -188,6 +259,162 @@ const SourceStep = ({ onNext, onPrevious }) => {
                   </Select>
                 </Form.Item>
               </>
+            )}
+
+            {authType === 'token' && (
+              <Collapse defaultActiveKey={['1']} ghost>
+                <Panel 
+                  header={
+                    <Space>
+                      <KeyOutlined />
+                      <Text strong>Token Configuration</Text>
+                    </Space>
+                  } 
+                  key="1"
+                >
+                  <Form.Item
+                    name="tokenEndpoint"
+                    label="Token Endpoint URL"
+                    rules={[{ required: true, message: 'Please enter the token endpoint URL' }]}
+                  >
+                    <Input 
+                      placeholder="https://api.example.com/oauth/token" 
+                      prefix={<LinkOutlined />}
+                      value={tokenConfig.endpoint}
+                      onChange={(e) => setTokenConfig({...tokenConfig, endpoint: e.target.value})}
+                    />
+                  </Form.Item>
+
+                  <Form.Item
+                    name="tokenMethod"
+                    label="Request Method"
+                  >
+                    <Radio.Group 
+                      value={tokenConfig.method}
+                      onChange={(e) => setTokenConfig({...tokenConfig, method: e.target.value})}
+                    >
+                      <Radio value="POST">POST</Radio>
+                      <Radio value="GET">GET</Radio>
+                      <Radio value="PUT">PUT</Radio>
+                    </Radio.Group>
+                  </Form.Item>
+
+                  <Divider orientation="left">Token Request Headers</Divider>
+                  
+                  {tokenConfig.headers.map((header, index) => (
+                    <Space key={index} style={{ display: 'flex', marginBottom: 8 }} align="baseline">
+                      <Input
+                        placeholder="Header Key"
+                        value={header.key}
+                        onChange={(e) => updateTokenHeader(index, 'key', e.target.value)}
+                        style={{ width: 200 }}
+                      />
+                      <Input
+                        placeholder="Header Value"
+                        value={header.value}
+                        onChange={(e) => updateTokenHeader(index, 'value', e.target.value)}
+                        style={{ width: 200 }}
+                      />
+                      {tokenConfig.headers.length > 1 && (
+                        <Button 
+                          type="text" 
+                          danger 
+                          onClick={() => removeTokenHeader(index)}
+                          icon={<CloseCircleOutlined />}
+                        />
+                      )}
+                    </Space>
+                  ))}
+                  
+                  <Form.Item>
+                    <Button 
+                      type="dashed" 
+                      onClick={addTokenHeader} 
+                      block 
+                      icon={<PlusOutlined />}
+                    >
+                      Add Header
+                    </Button>
+                  </Form.Item>
+
+                  <Form.Item
+                    name="tokenBody"
+                    label="Request Body (JSON)"
+                    tooltip="JSON body for token request. Use {{variable}} for dynamic values."
+                  >
+                    <Input.TextArea 
+                      rows={4}
+                      placeholder='{"grant_type": "client_credentials", "client_id": "{{client_id}}", "client_secret": "{{client_secret}}"}'
+                      value={tokenConfig.body}
+                      onChange={(e) => setTokenConfig({...tokenConfig, body: e.target.value})}
+                    />
+                  </Form.Item>
+
+                  <Divider orientation="left">Token Response Configuration</Divider>
+
+                  <Form.Item
+                    name="tokenPath"
+                    label="Token Field Path"
+                    tooltip="JSON path to access token in response (e.g., access_token, data.token)"
+                  >
+                    <Input 
+                      placeholder="access_token"
+                      value={tokenConfig.tokenPath}
+                      onChange={(e) => setTokenConfig({...tokenConfig, tokenPath: e.target.value})}
+                    />
+                  </Form.Item>
+
+                  <Form.Item
+                    name="expiresInPath"
+                    label="Expires In Field Path"
+                    tooltip="JSON path to token expiration time in response (e.g., expires_in, data.expires_in)"
+                  >
+                    <Input 
+                      placeholder="expires_in"
+                      value={tokenConfig.expiresInPath}
+                      onChange={(e) => setTokenConfig({...tokenConfig, expiresInPath: e.target.value})}
+                    />
+                  </Form.Item>
+
+                  <Form.Item
+                    name="expiresIn"
+                    label="Default Expires In (seconds)"
+                    tooltip="Default token expiration time if not provided in response"
+                  >
+                    <InputNumber 
+                      min={60}
+                      max={86400}
+                      value={tokenConfig.expiresIn}
+                      onChange={(value) => setTokenConfig({...tokenConfig, expiresIn: value})}
+                      style={{ width: '100%' }}
+                    />
+                  </Form.Item>
+
+                  <Form.Item
+                    name="refreshTokenPath"
+                    label="Refresh Token Field Path (Optional)"
+                    tooltip="JSON path to refresh token in response"
+                  >
+                    <Input 
+                      placeholder="refresh_token"
+                      value={tokenConfig.refreshTokenPath}
+                      onChange={(e) => setTokenConfig({...tokenConfig, refreshTokenPath: e.target.value})}
+                    />
+                  </Form.Item>
+
+                  <Form.Item
+                    name="refreshEnabled"
+                    label="Enable Token Refresh"
+                    valuePropName="checked"
+                    tooltip="Automatically refresh token when it expires"
+                  >
+                    <Switch 
+                      checked={tokenConfig.refreshEnabled}
+                      onChange={(checked) => setTokenConfig({...tokenConfig, refreshEnabled: checked})}
+                    />
+                  </Form.Item>
+                </Panel>
+              </Collapse>
             )}
 
             {authType === 'oauth2' && (

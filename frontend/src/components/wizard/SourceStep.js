@@ -13,7 +13,8 @@ import {
   Tabs,
   Collapse,
   InputNumber,
-  Radio
+  Radio,
+  Alert
 } from 'antd';
 import { 
   PlusOutlined, 
@@ -26,6 +27,7 @@ import {
   ClockCircleOutlined,
   SettingOutlined
 } from '@ant-design/icons';
+import { apiService, jsonPath } from '../../utils/apiService';
 
 const { Title, Text, Paragraph } = Typography;
 const { Option } = Select;
@@ -99,19 +101,50 @@ const SourceStep = ({ onNext, onPrevious }) => {
   const testConnection = async () => {
     try {
       setTestingConnection(true);
+      setTestResult(null);
       
-      if (authType === 'token' && tokenConfig.enabled) {
-        // Test token acquisition
-        await testTokenAcquisition();
-      } else {
-        // Test regular connection
-        await testRegularConnection();
+      // Validate form first
+      const formValues = form.getFieldsValue();
+      if (!formValues.baseUrl) {
+        throw new Error('Base URL is required');
       }
       
-      setTestResult({ success: true, message: 'Connection test successful!' });
-      message.success('Connection test successful!');
+      let result;
+      if (authType === 'token' && tokenConfig.enabled) {
+        // Validate token configuration
+        if (!tokenConfig.endpoint) {
+          throw new Error('Token endpoint is required for token-based authentication');
+        }
+        if (!tokenConfig.tokenPath) {
+          throw new Error('Token field path is required');
+        }
+        
+        // Test token acquisition
+        result = await testTokenAcquisition();
+        setTestResult({ 
+          success: true, 
+          message: 'Token acquisition successful!',
+          details: `Token: ${result.tokenData.token ? result.tokenData.token.substring(0, 20) + '...' : 'N/A'}`,
+          tokenData: result.tokenData
+        });
+        message.success('Token acquisition test successful!');
+      } else {
+        // Test regular connection
+        result = await testRegularConnection();
+        setTestResult({ 
+          success: true, 
+          message: 'Connection test successful!',
+          details: 'API endpoint is reachable'
+        });
+        message.success('Connection test successful!');
+      }
     } catch (error) {
-      setTestResult({ success: false, message: 'Connection failed: ' + error.message });
+      console.error('Test connection error:', error);
+      setTestResult({ 
+        success: false, 
+        message: 'Connection failed: ' + error.message,
+        details: error.message
+      });
       message.error('Connection test failed!');
     } finally {
       setTestingConnection(false);
@@ -119,24 +152,53 @@ const SourceStep = ({ onNext, onPrevious }) => {
   };
 
   const testTokenAcquisition = async () => {
-    // Simulate token acquisition test
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    
-    // In a real implementation, this would make an actual API call
     console.log('Testing token acquisition with config:', tokenConfig);
     
-    // Simulate success/failure based on configuration
+    // Validate required fields
     if (!tokenConfig.endpoint) {
       throw new Error('Token endpoint is required');
     }
+    
+    if (!tokenConfig.tokenPath) {
+      throw new Error('Token field path is required');
+    }
+
+    // Make the actual API call
+    const response = await apiService.testTokenAcquisition(tokenConfig);
+    console.log('Token response:', response);
+    
+    // Extract token data using JSON path
+    const tokenData = jsonPath.extractTokenData(response, tokenConfig);
+    
+    if (!tokenData.isValid) {
+      throw new Error(`No valid token found at path: ${tokenConfig.tokenPath}`);
+    }
+    
+    console.log('Extracted token data:', tokenData);
+    
+    return {
+      success: true,
+      tokenData,
+      response
+    };
   };
 
   const testRegularConnection = async () => {
-    // Simulate regular connection test
-    await new Promise(resolve => setTimeout(resolve, 1500));
+    const formValues = form.getFieldsValue();
+    console.log('Testing regular connection to:', formValues.baseUrl);
     
-    // In a real implementation, this would make an actual API call
-    console.log('Testing regular connection');
+    if (!formValues.baseUrl) {
+      throw new Error('Base URL is required');
+    }
+
+    // Make the actual API call
+    const response = await apiService.testRegularConnection(formValues.baseUrl, headers);
+    console.log('Connection response:', response);
+    
+    return {
+      success: true,
+      response
+    };
   };
 
   const handleSubmit = (values) => {
@@ -262,7 +324,7 @@ const SourceStep = ({ onNext, onPrevious }) => {
             )}
 
             {authType === 'token' && (
-              <Collapse defaultActiveKey={['1']} ghost>
+              <Collapse defaultActiveKey={['1', '2']} ghost>
                 <Panel 
                   header={
                     <Space>
@@ -414,6 +476,60 @@ const SourceStep = ({ onNext, onPrevious }) => {
                     />
                   </Form.Item>
                 </Panel>
+                
+                <Panel 
+                  header={
+                    <Space>
+                      <SettingOutlined />
+                      <Text strong>Configuration Examples</Text>
+                    </Space>
+                  } 
+                  key="2"
+                >
+                  <Alert
+                    message="Common Token Configuration Examples"
+                    description="Here are some common patterns for token-based authentication:"
+                    type="info"
+                    style={{ marginBottom: 16 }}
+                  />
+                  
+                  <Space direction="vertical" style={{ width: '100%' }}>
+                    <Card size="small" title="OAuth 2.0 Client Credentials" style={{ marginBottom: 8 }}>
+                      <Space direction="vertical" style={{ width: '100%' }}>
+                        <div><Text strong>Endpoint:</Text> <Text code>https://api.example.com/oauth/token</Text></div>
+                        <div><Text strong>Method:</Text> <Text code>POST</Text></div>
+                        <div><Text strong>Headers:</Text> <Text code>Content-Type: application/json</Text></div>
+                        <div><Text strong>Body:</Text></div>
+                        <pre style={{ background: '#f5f5f5', padding: '8px', borderRadius: '4px', fontSize: '12px' }}>
+{`{
+  "grant_type": "client_credentials",
+  "client_id": "your_client_id",
+  "client_secret": "your_client_secret"
+}`}
+                        </pre>
+                        <div><Text strong>Token Path:</Text> <Text code>access_token</Text></div>
+                        <div><Text strong>Expires Path:</Text> <Text code>expires_in</Text></div>
+                      </Space>
+                    </Card>
+                    
+                    <Card size="small" title="Custom API Token" style={{ marginBottom: 8 }}>
+                      <Space direction="vertical" style={{ width: '100%' }}>
+                        <div><Text strong>Endpoint:</Text> <Text code>https://api.example.com/auth/login</Text></div>
+                        <div><Text strong>Method:</Text> <Text code>POST</Text></div>
+                        <div><Text strong>Headers:</Text> <Text code>Content-Type: application/json</Text></div>
+                        <div><Text strong>Body:</Text></div>
+                        <pre style={{ background: '#f5f5f5', padding: '8px', borderRadius: '4px', fontSize: '12px' }}>
+{`{
+  "username": "your_username",
+  "password": "your_password"
+}`}
+                        </pre>
+                        <div><Text strong>Token Path:</Text> <Text code>data.token</Text></div>
+                        <div><Text strong>Expires Path:</Text> <Text code>data.expires_in</Text></div>
+                      </Space>
+                    </Card>
+                  </Space>
+                </Panel>
               </Collapse>
             )}
 
@@ -472,23 +588,48 @@ const SourceStep = ({ onNext, onPrevious }) => {
 
             <Divider />
 
-            <Space>
+            <Space direction="vertical" style={{ width: '100%' }}>
               <Button 
                 type="primary" 
                 onClick={testConnection} 
                 loading={testingConnection}
                 icon={<CheckCircleOutlined />}
+                block
               >
                 Test Connection
               </Button>
               
               {testResult && (
-                <Text
-                  type={testResult.success ? 'success' : 'danger'}
-                  style={{ marginLeft: 8 }}
-                >
-                  {testResult.message}
-                </Text>
+                <Alert
+                  message={testResult.message}
+                  description={testResult.details}
+                  type={testResult.success ? 'success' : 'error'}
+                  showIcon
+                  style={{ marginTop: 8 }}
+                />
+              )}
+
+              {testResult && testResult.success && testResult.tokenData && (
+                <Card size="small" title="Token Information" style={{ marginTop: 8 }}>
+                  <Space direction="vertical" style={{ width: '100%' }}>
+                    <div>
+                      <Text strong>Token: </Text>
+                      <Text code>{testResult.tokenData.token ? testResult.tokenData.token.substring(0, 50) + '...' : 'N/A'}</Text>
+                    </div>
+                    {testResult.tokenData.expiresIn && (
+                      <div>
+                        <Text strong>Expires In: </Text>
+                        <Text>{testResult.tokenData.expiresIn} seconds</Text>
+                      </div>
+                    )}
+                    {testResult.tokenData.refreshToken && (
+                      <div>
+                        <Text strong>Refresh Token: </Text>
+                        <Text code>{testResult.tokenData.refreshToken.substring(0, 30) + '...'}</Text>
+                      </div>
+                    )}
+                  </Space>
+                </Card>
               )}
             </Space>
 

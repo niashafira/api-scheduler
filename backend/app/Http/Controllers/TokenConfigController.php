@@ -69,9 +69,11 @@ class TokenConfigController extends Controller
     /**
      * Display the specified token configuration.
      */
-    public function show(int $id): JsonResponse
+    public function show($id): JsonResponse
     {
         try {
+            // Convert string ID to integer
+            $id = (int) $id;
             $tokenConfig = $this->tokenConfigService->getTokenConfig($id);
 
             if (!$tokenConfig) {
@@ -98,9 +100,11 @@ class TokenConfigController extends Controller
     /**
      * Update the specified token configuration.
      */
-    public function update(Request $request, int $id): JsonResponse
+    public function update(Request $request, $id): JsonResponse
     {
         try {
+            // Convert string ID to integer
+            $id = (int) $id;
             $tokenConfig = $this->tokenConfigService->updateTokenConfig($id, $request->all());
 
             if (!$tokenConfig) {
@@ -133,9 +137,11 @@ class TokenConfigController extends Controller
     /**
      * Remove the specified token configuration.
      */
-    public function destroy(int $id): JsonResponse
+    public function destroy($id): JsonResponse
     {
         try {
+            // Convert string ID to integer
+            $id = (int) $id;
             $deleted = $this->tokenConfigService->deleteTokenConfig($id);
 
             if (!$deleted) {
@@ -183,9 +189,11 @@ class TokenConfigController extends Controller
     /**
      * Mark token configuration as used.
      */
-    public function markAsUsed(int $id): JsonResponse
+    public function markAsUsed($id): JsonResponse
     {
         try {
+            // Convert string ID to integer
+            $id = (int) $id;
             $marked = $this->tokenConfigService->markTokenConfigAsUsed($id);
 
             if (!$marked) {

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Form, 
   Input, 
@@ -25,10 +25,10 @@ import {
   CheckCircleOutlined,
   CloseCircleOutlined,
   KeyOutlined,
-  ClockCircleOutlined,
   SettingOutlined
 } from '@ant-design/icons';
 import { apiService, jsonPath } from '../../utils/apiService';
+import tokenConfigApi from '../../services/tokenConfigApi';
 
 const { Title, Text, Paragraph } = Typography;
 const { Option } = Select;
@@ -44,6 +44,9 @@ const SourceStep = ({ onNext, onPrevious }) => {
   const [testResult, setTestResult] = useState(null);
   const [activeTab, setActiveTab] = useState('create');
   const [testStep, setTestStep] = useState('');
+  const [existingTokenConfigs, setExistingTokenConfigs] = useState([]);
+  const [loadingTokenConfigs, setLoadingTokenConfigs] = useState(false);
+  const [selectedTokenConfigId, setSelectedTokenConfigId] = useState(null);
   const [tokenConfig, setTokenConfig] = useState({
     enabled: false,
     endpoint: '',
@@ -57,12 +60,81 @@ const SourceStep = ({ onNext, onPrevious }) => {
     refreshEnabled: false
   });
 
+  // Fetch existing token configurations when component mounts
+  useEffect(() => {
+    fetchExistingTokenConfigs();
+  }, []);
+
+  const fetchExistingTokenConfigs = async () => {
+    try {
+      setLoadingTokenConfigs(true);
+      const configs = await tokenConfigApi.getActiveTokenConfigs();
+      setExistingTokenConfigs(configs.data || configs);
+    } catch (error) {
+      console.error('Failed to fetch token configurations:', error);
+      message.error('Failed to load existing token configurations');
+    } finally {
+      setLoadingTokenConfigs(false);
+    }
+  };
+
   const handleAuthTypeChange = (value) => {
     setAuthType(value);
     if (value === 'token') {
       setTokenConfig({...tokenConfig, enabled: true});
     } else {
       setTokenConfig({...tokenConfig, enabled: false});
+      setSelectedTokenConfigId(null);
+    }
+  };
+
+  const handleTokenConfigSelect = async (configId) => {
+    if (!configId) {
+      setSelectedTokenConfigId(null);
+      setTokenConfig({
+        enabled: false,
+        endpoint: '',
+        method: 'POST',
+        headers: [{ key: '', value: '' }],
+        body: '',
+        tokenPath: 'access_token',
+        expiresInPath: 'expires_in',
+        refreshTokenPath: 'refresh_token',
+        expiresIn: 3600,
+        refreshEnabled: false
+      });
+      return;
+    }
+
+    try {
+      setLoadingTokenConfigs(true);
+      // Ensure configId is treated as an integer
+      const numericId = parseInt(configId, 10);
+      if (isNaN(numericId)) {
+        throw new Error('Invalid token configuration ID');
+      }
+      
+      const config = await tokenConfigApi.getTokenConfig(numericId);
+      const configData = config.data || config;
+      
+      setSelectedTokenConfigId(numericId);
+      setTokenConfig({
+        enabled: true,
+        endpoint: configData.endpoint,
+        method: configData.method,
+        headers: configData.headers || [{ key: '', value: '' }],
+        body: configData.body || '',
+        tokenPath: configData.token_path,
+        expiresInPath: configData.expires_in_path,
+        refreshTokenPath: configData.refresh_token_path,
+        expiresIn: configData.expires_in || 3600,
+        refreshEnabled: configData.refresh_enabled || false
+      });
+    } catch (error) {
+      console.error('Failed to load token configuration:', error);
+      message.error('Failed to load selected token configuration');
+    } finally {
+      setLoadingTokenConfigs(false);
     }
   };
 
@@ -112,7 +184,6 @@ const SourceStep = ({ onNext, onPrevious }) => {
         throw new Error('Base URL is required');
       }
       
-      let result;
       if (authType === 'token' && tokenConfig.enabled) {
         // Validate token configuration
         if (!tokenConfig.endpoint) {
@@ -143,7 +214,7 @@ const SourceStep = ({ onNext, onPrevious }) => {
         message.success('Token acquisition and API test successful!');
       } else {
         // Test regular connection
-        result = await testRegularConnection();
+        await testRegularConnection();
         setTestResult({ 
           success: true, 
           message: 'Connection test successful!',
@@ -242,7 +313,10 @@ const SourceStep = ({ onNext, onPrevious }) => {
     const formData = {
       ...values,
       headers: headers.filter(h => h.key && h.value),
-      tokenConfig: authType === 'token' ? tokenConfig : null,
+      tokenConfig: authType === 'token' ? {
+        ...tokenConfig,
+        selectedConfigId: selectedTokenConfigId ? parseInt(selectedTokenConfigId, 10) : null
+      } : null,
     };
     console.log('Processed form data:', formData);
     
@@ -373,11 +447,18 @@ const SourceStep = ({ onNext, onPrevious }) => {
                     name="existingTokenConfig"
                     label="Select Token Configuration"
                   >
-                    <Select placeholder="Select a token configuration">
-                      <Option value="config1">OAuth 2.0 Client Credentials</Option>
-                      <Option value="config2">Custom API Authentication</Option>
-                      <Option value="config3">JWT Token Service</Option>
-                      <Option value="config4">API Gateway Auth</Option>
+                    <Select 
+                      placeholder="Select a token configuration"
+                      value={selectedTokenConfigId}
+                      onChange={handleTokenConfigSelect}
+                      loading={loadingTokenConfigs}
+                      allowClear
+                    >
+                      {existingTokenConfigs.map((config) => (
+                        <Option key={config.id} value={config.id}>
+                          {config.name}
+                        </Option>
+                      ))}
                     </Select>
                   </Form.Item>
                   

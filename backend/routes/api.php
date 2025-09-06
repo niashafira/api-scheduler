@@ -32,7 +32,7 @@ Route::get('/test-cors', function () {
 // Dynamic Table Routes
 Route::post('/tables', [DynamicTableController::class, 'createTable']);
 
-// Token Configuration Routes
-Route::apiResource('token-configs', TokenConfigController::class);
+// Token Configuration Routes - specific routes must come before resource routes
 Route::get('/token-configs/active', [TokenConfigController::class, 'active']);
 Route::post('/token-configs/{id}/mark-used', [TokenConfigController::class, 'markAsUsed']);
+Route::apiResource('token-configs', TokenConfigController::class);

@@ -4,6 +4,7 @@ use App\Http\Controllers\API\DynamicTableController;
 use App\Http\Controllers\TokenConfigController;
 use App\Http\Controllers\ApiSourceController;
 use App\Http\Controllers\ApiRequestController;
+use App\Http\Controllers\ApiExtractController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -49,3 +50,10 @@ Route::get('/api-requests/active', [ApiRequestController::class, 'active']);
 Route::get('/api-requests/source/{sourceId}', [ApiRequestController::class, 'bySource']);
 Route::post('/api-requests/{id}/mark-executed', [ApiRequestController::class, 'markAsExecuted']);
 Route::apiResource('api-requests', ApiRequestController::class);
+
+// API Extract Routes - specific routes must come before resource routes
+Route::get('/api-extracts/active', [ApiExtractController::class, 'active']);
+Route::get('/api-extracts/request/{requestId}', [ApiExtractController::class, 'byRequest']);
+Route::post('/api-extracts/{id}/mark-executed', [ApiExtractController::class, 'markAsExecuted']);
+Route::post('/api-extracts/{id}/test', [ApiExtractController::class, 'testExtraction']);
+Route::apiResource('api-extracts', ApiExtractController::class);

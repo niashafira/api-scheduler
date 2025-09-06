@@ -28,6 +28,9 @@ class TokenConfigService
 
     public function createTokenConfig(array $data): TokenConfig
     {
+        // Convert camelCase to snake_case for database fields
+        $data = $this->convertCamelCaseToSnakeCase($data);
+
         $this->validateTokenConfigData($data);
 
         // Transform headers array to proper format
@@ -46,6 +49,9 @@ class TokenConfigService
         if (!$tokenConfig) {
             return null;
         }
+
+        // Convert camelCase to snake_case for database fields
+        $data = $this->convertCamelCaseToSnakeCase($data);
 
         $this->validateTokenConfigData($data, $id);
 
@@ -85,11 +91,11 @@ class TokenConfigService
             'headers.*.key' => 'required_with:headers|string|max:255',
             'headers.*.value' => 'required_with:headers|string|max:1000',
             'body' => 'nullable|string',
-            'tokenPath' => 'required|string|max:255',
-            'expiresInPath' => 'nullable|string|max:255',
-            'refreshTokenPath' => 'nullable|string|max:255',
-            'expiresIn' => 'nullable|integer|min:60|max:86400',
-            'refreshEnabled' => 'nullable|boolean',
+            'token_path' => 'required|string|max:255',
+            'expires_in_path' => 'nullable|string|max:255',
+            'refresh_token_path' => 'nullable|string|max:255',
+            'expires_in' => 'nullable|integer|min:60|max:86400',
+            'refresh_enabled' => 'nullable|boolean',
             'status' => 'nullable|in:active,inactive',
         ];
 
@@ -104,5 +110,28 @@ class TokenConfigService
         if ($validator->fails()) {
             throw new ValidationException($validator);
         }
+    }
+
+    /**
+     * Convert camelCase field names to snake_case for database compatibility
+     */
+    protected function convertCamelCaseToSnakeCase(array $data): array
+    {
+        $fieldMapping = [
+            'tokenPath' => 'token_path',
+            'expiresInPath' => 'expires_in_path',
+            'refreshTokenPath' => 'refresh_token_path',
+            'expiresIn' => 'expires_in',
+            'refreshEnabled' => 'refresh_enabled',
+        ];
+
+        foreach ($fieldMapping as $camelCase => $snakeCase) {
+            if (isset($data[$camelCase])) {
+                $data[$snakeCase] = $data[$camelCase];
+                unset($data[$camelCase]);
+            }
+        }
+
+        return $data;
     }
 }

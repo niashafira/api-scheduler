@@ -81,6 +81,21 @@ export const apiService = {
     };
 
     return await this.makeRequest(baseUrl, options);
+  },
+
+  async testApiWithToken(baseUrl, token, headers = []) {
+    const filteredHeaders = headers.filter(h => h.key && h.value);
+    const headerObj = {
+      'Authorization': `Bearer ${token}`,
+      ...filteredHeaders.reduce((acc, h) => ({ ...acc, [h.key]: h.value }), {})
+    };
+
+    const options = {
+      method: 'GET',
+      headers: headerObj,
+    };
+
+    return await this.makeRequest(baseUrl, options);
   }
 };
 

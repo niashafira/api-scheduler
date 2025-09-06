@@ -14,7 +14,8 @@ import {
   Collapse,
   InputNumber,
   Radio,
-  Alert
+  Alert,
+  Steps
 } from 'antd';
 import { 
   PlusOutlined, 
@@ -33,6 +34,7 @@ const { Title, Text, Paragraph } = Typography;
 const { Option } = Select;
 const { TabPane } = Tabs;
 const { Panel } = Collapse;
+const { Step } = Steps;
 
 const SourceStep = ({ onNext, onPrevious }) => {
   const [form] = Form.useForm();
@@ -41,6 +43,7 @@ const SourceStep = ({ onNext, onPrevious }) => {
   const [testingConnection, setTestingConnection] = useState(false);
   const [testResult, setTestResult] = useState(null);
   const [activeTab, setActiveTab] = useState('create');
+  const [testStep, setTestStep] = useState('');
   const [tokenConfig, setTokenConfig] = useState({
     enabled: false,
     endpoint: '',
@@ -119,15 +122,25 @@ const SourceStep = ({ onNext, onPrevious }) => {
           throw new Error('Token field path is required');
         }
         
-        // Test token acquisition
-        result = await testTokenAcquisition();
+        // Step 1: Test token acquisition
+        setTestStep('Acquiring token...');
+        const tokenResult = await testTokenAcquisition();
+        console.log('Token acquisition successful:', tokenResult);
+        
+        // Step 2: Test API with acquired token
+        setTestStep('Testing API with token...');
+        const apiResult = await testApiWithToken(formValues.baseUrl, tokenResult.tokenData.token);
+        console.log('API test with token successful:', apiResult);
+        
         setTestResult({ 
           success: true, 
-          message: 'Token acquisition successful!',
-          details: `Token: ${result.tokenData.token ? result.tokenData.token.substring(0, 20) + '...' : 'N/A'}`,
-          tokenData: result.tokenData
+          message: 'Token acquisition and API test successful!',
+          details: `Token acquired and API endpoint tested successfully`,
+          tokenData: tokenResult.tokenData,
+          apiTested: true,
+          apiResponse: apiResult.response
         });
-        message.success('Token acquisition test successful!');
+        message.success('Token acquisition and API test successful!');
       } else {
         // Test regular connection
         result = await testRegularConnection();
@@ -148,6 +161,7 @@ const SourceStep = ({ onNext, onPrevious }) => {
       message.error('Connection test failed!');
     } finally {
       setTestingConnection(false);
+      setTestStep('');
     }
   };
 
@@ -179,6 +193,27 @@ const SourceStep = ({ onNext, onPrevious }) => {
     return {
       success: true,
       tokenData,
+      response
+    };
+  };
+
+  const testApiWithToken = async (baseUrl, token) => {
+    console.log('Testing API with acquired token:', baseUrl);
+    
+    if (!baseUrl) {
+      throw new Error('Base URL is required');
+    }
+    
+    if (!token) {
+      throw new Error('Token is required');
+    }
+
+    // Make the actual API call with token
+    const response = await apiService.testApiWithToken(baseUrl, token, headers);
+    console.log('API response with token:', response);
+    
+    return {
+      success: true,
       response
     };
   };
@@ -596,9 +631,18 @@ const SourceStep = ({ onNext, onPrevious }) => {
                 icon={<CheckCircleOutlined />}
                 block
               >
-                Test Connection
+                {testingConnection ? (testStep || 'Testing...') : 'Test Connection'}
               </Button>
               
+              {testingConnection && authType === 'token' && (
+                <Card size="small" style={{ marginTop: 8 }}>
+                  <Steps size="small" current={testStep === 'Acquiring token...' ? 0 : testStep === 'Testing API with token...' ? 1 : 0}>
+                    <Step title="Acquire Token" description="Getting authentication token" />
+                    <Step title="Test API" description="Testing API with token" />
+                  </Steps>
+                </Card>
+              )}
+
               {testResult && (
                 <Alert
                   message={testResult.message}
@@ -610,8 +654,22 @@ const SourceStep = ({ onNext, onPrevious }) => {
               )}
 
               {testResult && testResult.success && testResult.tokenData && (
-                <Card size="small" title="Token Information" style={{ marginTop: 8 }}>
+                <Card size="small" title="Test Results" style={{ marginTop: 8 }}>
                   <Space direction="vertical" style={{ width: '100%' }}>
+                    <div>
+                      <Text strong>✅ Token Acquisition: </Text>
+                      <Text type="success">Successful</Text>
+                    </div>
+                    
+                    {testResult.apiTested && (
+                      <div>
+                        <Text strong>✅ API Test: </Text>
+                        <Text type="success">Successful</Text>
+                      </div>
+                    )}
+                    
+                    <Divider style={{ margin: '8px 0' }} />
+                    
                     <div>
                       <Text strong>Token: </Text>
                       <Text code>{testResult.tokenData.token ? testResult.tokenData.token.substring(0, 50) + '...' : 'N/A'}</Text>
@@ -626,6 +684,17 @@ const SourceStep = ({ onNext, onPrevious }) => {
                       <div>
                         <Text strong>Refresh Token: </Text>
                         <Text code>{testResult.tokenData.refreshToken.substring(0, 30) + '...'}</Text>
+                      </div>
+                    )}
+                    
+                    {testResult.apiResponse && (
+                      <div>
+                        <Text strong>API Response: </Text>
+                        <Text type="secondary">
+                          {typeof testResult.apiResponse === 'object' 
+                            ? 'JSON response received' 
+                            : 'Response received'}
+                        </Text>
                       </div>
                     )}
                   </Space>

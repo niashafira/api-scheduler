@@ -1,61 +1,38 @@
-import { Button, Layout, Typography, Space, Card } from 'antd';
-import { GithubOutlined, ApiOutlined, ScheduleOutlined } from '@ant-design/icons';
+import React from 'react';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import './App.css';
-import WizardContainer from './components/wizard/WizardContainer';
-import { useState } from 'react';
 
-const { Header, Content, Footer } = Layout;
-const { Title, Text } = Typography;
+// Layout
+import MainLayout from './components/layout/MainLayout';
+
+// Pages
+import Dashboard from './pages/Dashboard';
+import Sources from './pages/Sources';
+import Schedules from './pages/Schedules';
+import History from './pages/History';
+import Settings from './pages/Settings';
+
+// Wizard
+import WizardContainer from './components/wizard/WizardContainer';
 
 function App() {
-  const [showWizard, setShowWizard] = useState(false);
-
   return (
-    <Layout className="layout">
-      <Header style={{ display: 'flex', alignItems: 'center' }}>
-        <div className="logo" />
-        <Title level={4} style={{ color: 'white', margin: 0 }}>
-          <Space>
-            <ScheduleOutlined />
-            API Call Scheduler
-          </Space>
-        </Title>
-      </Header>
-      <Content style={{ padding: '20px', minHeight: 'calc(100vh - 64px - 70px)' }}>
-        {showWizard ? (
-          <WizardContainer />
-        ) : (
-          <div className="site-layout-content">
-            <Card title="Welcome to API Call Scheduler" style={{ width: '100%' }}>
-              <Typography>
-                <Title level={3}>Getting Started</Title>
-                <Text>This application helps you schedule and manage API calls efficiently.</Text>
-                
-                <div style={{ marginTop: '20px' }}>
-                  <Space>
-                    <Button type="primary" icon={<ApiOutlined />}>
-                      View API Endpoints
-                    </Button>
-                    <Button 
-                      icon={<ScheduleOutlined />}
-                      onClick={() => setShowWizard(true)}
-                    >
-                      Schedule New Call
-                    </Button>
-                  </Space>
-                </div>
-              </Typography>
-            </Card>
-          </div>
-        )}
-      </Content>
-      <Footer style={{ textAlign: 'center' }}>
-        API Call Scheduler ©{new Date().getFullYear()} Created with Ant Design
-        <div>
-          <GithubOutlined style={{ fontSize: '16px', margin: '0 8px' }} />
-        </div>
-      </Footer>
-    </Layout>
+    <Router>
+      <Routes>
+        <Route path="/wizard" element={<WizardContainer />} />
+        <Route path="/" element={
+          <MainLayout>
+            <Routes>
+              <Route index element={<Dashboard />} />
+              <Route path="sources" element={<Sources />} />
+              <Route path="schedules" element={<Schedules />} />
+              <Route path="history" element={<History />} />
+              <Route path="settings" element={<Settings />} />
+            </Routes>
+          </MainLayout>
+        } />
+      </Routes>
+    </Router>
   );
 }
 

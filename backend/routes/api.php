@@ -3,6 +3,7 @@
 use App\Http\Controllers\API\DynamicTableController;
 use App\Http\Controllers\TokenConfigController;
 use App\Http\Controllers\ApiSourceController;
+use App\Http\Controllers\ApiRequestController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -42,3 +43,9 @@ Route::apiResource('token-configs', TokenConfigController::class);
 Route::get('/api-sources/active', [ApiSourceController::class, 'active']);
 Route::post('/api-sources/{id}/mark-used', [ApiSourceController::class, 'markAsUsed']);
 Route::apiResource('api-sources', ApiSourceController::class);
+
+// API Request Routes - specific routes must come before resource routes
+Route::get('/api-requests/active', [ApiRequestController::class, 'active']);
+Route::get('/api-requests/source/{sourceId}', [ApiRequestController::class, 'bySource']);
+Route::post('/api-requests/{id}/mark-executed', [ApiRequestController::class, 'markAsExecuted']);
+Route::apiResource('api-requests', ApiRequestController::class);

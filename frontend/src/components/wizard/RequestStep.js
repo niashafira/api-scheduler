@@ -26,6 +26,7 @@ import {
 } from '@ant-design/icons';
 import { apiService, jsonPath } from '../../utils/apiService';
 import apiSourceApi from '../../services/apiSourceApi';
+import apiRequestApi from '../../services/apiRequestApi';
 
 const { Title, Text } = Typography;
 const { TabPane } = Tabs;
@@ -305,24 +306,40 @@ const RequestStep = ({ onNext, onPrevious, sourceData }) => {
     }
   };
 
-  const handleSubmit = (values) => {
-    // Process form values
-    const formData = {
-      ...values,
-      sourceId: sourceData?.id,
-      path: endpointPath,
-      method: httpMethod,
-      pathParams: pathParams.filter(p => p.name),
-      queryParams: queryParams.filter(p => p.name),
-      headers: headers.filter(h => h.key && h.value),
-      body: requestBody,
-      bodyFormat: bodyFormat,
-    };
-    
-    console.log('Request configuration:', formData);
-    
-    // Move to next step
-    if (onNext) onNext(formData);
+  const handleSubmit = async (values) => {
+    try {
+      // Process form values
+      const formData = {
+        apiSourceId: sourceData?.id,
+        name: values.name || `${httpMethod} ${endpointPath || '/'}`,
+        method: httpMethod,
+        path: endpointPath,
+        path_params: pathParams.filter(p => p.name),
+        query_params: queryParams.filter(p => p.name),
+        headers: headers.filter(h => h.key && h.value),
+        body: requestBody,
+        body_format: bodyFormat,
+        status: 'active',
+      };
+      
+      console.log('Request configuration to save:', formData);
+      
+      // Save request configuration to backend
+      const response = await apiRequestApi.createApiRequest(formData);
+      console.log('API request created:', response);
+      
+      message.success('API request created successfully!');
+      
+      // Move to next step with the created request data
+      if (onNext) onNext({ 
+        ...formData, 
+        id: response.data.id,
+        apiSource: apiSource
+      });
+    } catch (error) {
+      console.error('Failed to create API request:', error);
+      message.error('Failed to create API request: ' + error.message);
+    }
   };
 
   return (
@@ -353,6 +370,17 @@ const RequestStep = ({ onNext, onPrevious, sourceData }) => {
             showIcon
             style={{ marginBottom: 24 }}
           />
+          
+          <Form.Item
+            name="name"
+            label="Request Name"
+            tooltip="A descriptive name for this API request"
+          >
+            <Input 
+              placeholder={`${httpMethod} ${endpointPath || '/'}`}
+              prefix={<ApiOutlined />}
+            />
+          </Form.Item>
 
           <Form.Item
             label={

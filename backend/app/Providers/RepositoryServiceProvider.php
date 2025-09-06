@@ -6,9 +6,11 @@ use App\Repositories\DynamicTableRepository;
 use App\Repositories\Interfaces\DynamicTableRepositoryInterface;
 use App\Repositories\TokenConfigRepository;
 use App\Repositories\ApiSourceRepository;
+use App\Repositories\ApiRequestRepository;
 use App\Repositories\Interfaces\ApiSourceRepositoryInterface;
 use App\Services\TokenConfigService;
 use App\Services\ApiSourceService;
+use App\Services\ApiRequestService;
 use Illuminate\Support\ServiceProvider;
 
 class RepositoryServiceProvider extends ServiceProvider
@@ -32,6 +34,8 @@ class RepositoryServiceProvider extends ServiceProvider
         $this->app->bind(TokenConfigService::class);
         $this->app->bind(ApiSourceRepository::class);
         $this->app->bind(ApiSourceService::class);
+        $this->app->bind(ApiRequestRepository::class);
+        $this->app->bind(ApiRequestService::class);
     }
 
     /**

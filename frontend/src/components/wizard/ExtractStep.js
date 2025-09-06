@@ -34,7 +34,7 @@ const { Option } = Select;
 const { TabPane } = Tabs;
 const { TextArea } = Input;
 
-const ExtractStep = ({ onNext, onPrevious, sourceData, requestData }) => {
+const ExtractStep = ({ onNext, onPrevious, sourceData, requestData, initialData = null, isEditMode = false }) => {
   const [form] = Form.useForm();
   const [activeTab, setActiveTab] = useState('preview');
   const [responseData, setResponseData] = useState(null);
@@ -63,6 +63,41 @@ const ExtractStep = ({ onNext, onPrevious, sourceData, requestData }) => {
     }
   }, [requestData]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Populate form with initial data when in edit mode
+  useEffect(() => {
+    if (isEditMode && initialData) {
+      populateFormWithInitialData();
+    }
+  }, [isEditMode, initialData]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const populateFormWithInitialData = () => {
+    if (!initialData) return;
+
+    // Set form values
+    form.setFieldsValue({
+      name: initialData.name || '',
+      primaryKeyField: initialData.primary_key_field || '',
+      nullValueHandling: initialData.null_value_handling || 'keep',
+      dateFormat: initialData.date_format || '',
+      transformScript: initialData.transform_script || ''
+    });
+
+    // Set extraction configuration
+    setRootArrayPath(initialData.root_array_path || '');
+    setPrimaryKeyField(initialData.primary_key_field || '');
+
+    // Set extraction paths
+    if (initialData.extraction_paths && Array.isArray(initialData.extraction_paths)) {
+      setExtractionPaths(initialData.extraction_paths.length > 0 ? initialData.extraction_paths : [{
+        name: 'items',
+        path: 'data',
+        description: 'Main data array',
+        required: true,
+        dataType: 'array'
+      }]);
+    }
+  };
+
   const fetchTestResponse = async () => {
     try {
       setLoading(true);
@@ -71,10 +106,54 @@ const ExtractStep = ({ onNext, onPrevious, sourceData, requestData }) => {
         throw new Error('No request data available');
       }
       
+      // Build request options with token authentication if needed
+      let requestOptions = buildRequestOptions();
+      
+      // Handle token-based authentication
+      if (sourceData && sourceData.auth_type === 'token' && sourceData.token_config_id) {
+        try {
+          // Fetch token configuration details
+          const tokenConfigResponse = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:8000/api'}/token-configs/${sourceData.token_config_id}`);
+          const tokenConfigData = await tokenConfigResponse.json();
+          
+          if (tokenConfigData.success && tokenConfigData.data) {
+            const tokenConfig = tokenConfigData.data;
+            
+            // Acquire token
+            const tokenResponse = await apiService.testTokenAcquisition({
+              endpoint: tokenConfig.endpoint,
+              method: tokenConfig.method,
+              headers: tokenConfig.headers || [],
+              body: tokenConfig.body,
+              tokenPath: tokenConfig.token_path,
+              expiresInPath: tokenConfig.expires_in_path,
+              refreshTokenPath: tokenConfig.refresh_token_path
+            });
+            
+            // Extract token from response
+            const tokenData = jsonPath.extractTokenData(tokenResponse, {
+              tokenPath: tokenConfig.token_path,
+              expiresInPath: tokenConfig.expires_in_path,
+              refreshTokenPath: tokenConfig.refresh_token_path
+            });
+            
+            if (!tokenData.isValid) {
+              throw new Error(`Failed to acquire token from path: ${tokenConfig.token_path}`);
+            }
+            
+            // Add token to request headers
+            requestOptions.headers['Authorization'] = `Bearer ${tokenData.token}`;
+          }
+        } catch (tokenError) {
+          console.error('Token acquisition failed:', tokenError);
+          throw new Error(`Token acquisition failed: ${tokenError.message}`);
+        }
+      }
+      
       // Make a real API call to test the request
       const response = await apiService.testCustomRequest(
         buildRequestUrl(), 
-        buildRequestOptions()
+        requestOptions
       );
       
       // Check if the response is HTML (often happens with CORS issues or when hitting web pages)
@@ -481,11 +560,18 @@ const ExtractStep = ({ onNext, onPrevious, sourceData, requestData }) => {
       
       console.log('Extraction configuration to save:', formData);
       
-      // Save to the backend
-      const response = await apiExtractApi.createApiExtract(formData);
-      console.log('API extract created:', response);
-      
-      message.success('Extraction configuration saved successfully!');
+      let response;
+      if (isEditMode && initialData && initialData.id) {
+        // Update existing API extract
+        response = await apiExtractApi.updateApiExtract(initialData.id, formData);
+        console.log('API extract updated:', response);
+        message.success('Extraction configuration updated successfully!');
+      } else {
+        // Create new API extract
+        response = await apiExtractApi.createApiExtract(formData);
+        console.log('API extract created:', response);
+        message.success('Extraction configuration saved successfully!');
+      }
       
       // Move to next step with the extraction data
       if (onNext) {
@@ -497,8 +583,8 @@ const ExtractStep = ({ onNext, onPrevious, sourceData, requestData }) => {
         });
       }
     } catch (error) {
-      console.error('Failed to save extraction configuration:', error);
-      message.error('Failed to save extraction configuration: ' + error.message);
+      console.error(`Failed to ${isEditMode ? 'update' : 'save'} extraction configuration:`, error);
+      message.error(`Failed to ${isEditMode ? 'update' : 'save'} extraction configuration: ` + error.message);
     }
   };
 

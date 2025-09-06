@@ -1,65 +1,19 @@
-import React, { useState } from 'react';
-import { Table, Button, Space, Tag, Tooltip, Modal, Typography } from 'antd';
+import React, { useState, useEffect } from 'react';
+import { Table, Button, Space, Tag, Tooltip, Modal, Typography, message, Spin } from 'antd';
 import { 
   PlusOutlined, 
   EditOutlined, 
   DeleteOutlined, 
   CheckCircleOutlined, 
   CloseCircleOutlined,
-  ApiOutlined
+  ApiOutlined,
+  ReloadOutlined
 } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
+import apiSourceApi from '../../services/apiSourceApi';
 
 const { Title } = Typography;
 
-// Mock data for demonstration
-const mockData = [
-  {
-    id: '1',
-    name: 'Weather API',
-    baseUrl: 'https://api.weatherapi.com/v1',
-    authType: 'apiKey',
-    status: 'active',
-    lastUsed: '2023-08-15T10:30:00',
-    createdAt: '2023-07-01T14:22:00',
-  },
-  {
-    id: '2',
-    name: 'GitHub API',
-    baseUrl: 'https://api.github.com',
-    authType: 'oauth2',
-    status: 'active',
-    lastUsed: '2023-08-14T16:45:00',
-    createdAt: '2023-06-15T09:10:00',
-  },
-  {
-    id: '3',
-    name: 'E-commerce Product API',
-    baseUrl: 'https://api.myshop.com/products',
-    authType: 'bearer',
-    status: 'inactive',
-    lastUsed: '2023-07-20T11:15:00',
-    createdAt: '2023-05-10T13:40:00',
-  },
-  {
-    id: '4',
-    name: 'Analytics API',
-    baseUrl: 'https://analytics.example.org/api',
-    authType: 'basic',
-    status: 'active',
-    lastUsed: '2023-08-10T09:20:00',
-    createdAt: '2023-04-22T10:30:00',
-  },
-  {
-    id: '5',
-    name: 'Payment Gateway API',
-    baseUrl: 'https://payments.example.com/v2',
-    authType: 'apiKey',
-    status: 'inactive',
-    lastUsed: '2023-06-05T14:50:00',
-    createdAt: '2023-03-15T16:20:00',
-  },
-];
 
 const SourcesTable = () => {
   const navigate = useNavigate();
@@ -67,6 +21,30 @@ const SourcesTable = () => {
   const [loading, setLoading] = useState(false);
   const [deleteModalVisible, setDeleteModalVisible] = useState(false);
   const [sourceToDelete, setSourceToDelete] = useState(null);
+  const [dataSource, setDataSource] = useState([]);
+  const [fetching, setFetching] = useState(true);
+
+  // Fetch API sources on component mount
+  useEffect(() => {
+    fetchApiSources();
+  }, []);
+
+  const fetchApiSources = async () => {
+    try {
+      setFetching(true);
+      const response = await apiSourceApi.getAllApiSources();
+      if (response.success) {
+        setDataSource(response.data);
+      } else {
+        message.error('Failed to fetch API sources: ' + response.message);
+      }
+    } catch (error) {
+      console.error('Error fetching API sources:', error);
+      message.error('Failed to fetch API sources: ' + error.message);
+    } finally {
+      setFetching(false);
+    }
+  };
 
   const handleCreateSource = () => {
     navigate('/sources/new');
@@ -82,15 +60,30 @@ const SourcesTable = () => {
     setDeleteModalVisible(true);
   };
 
-  const handleDeleteConfirm = () => {
-    setLoading(true);
-    // Simulate API call
-    setTimeout(() => {
-      console.log('Deleted source:', sourceToDelete);
+  const handleDeleteConfirm = async () => {
+    if (!sourceToDelete) return;
+    
+    try {
+      setLoading(true);
+      const response = await apiSourceApi.deleteApiSource(sourceToDelete.id);
+      
+      if (response.success) {
+        message.success('API source deleted successfully');
+        // Refresh the data
+        await fetchApiSources();
+        // Clear selection
+        setSelectedRowKeys([]);
+      } else {
+        message.error('Failed to delete API source: ' + response.message);
+      }
+    } catch (error) {
+      console.error('Error deleting API source:', error);
+      message.error('Failed to delete API source: ' + error.message);
+    } finally {
       setLoading(false);
       setDeleteModalVisible(false);
       setSourceToDelete(null);
-    }, 1000);
+    }
   };
 
   const columns = [
@@ -103,42 +96,45 @@ const SourcesTable = () => {
     },
     {
       title: 'Base URL',
-      dataIndex: 'baseUrl',
-      key: 'baseUrl',
+      dataIndex: 'base_url',
+      key: 'base_url',
       ellipsis: true,
     },
     {
       title: 'Auth Type',
-      dataIndex: 'authType',
-      key: 'authType',
+      dataIndex: 'auth_type',
+      key: 'auth_type',
       render: (authType) => {
         let color;
         switch (authType) {
-          case 'apiKey':
+          case 'api_key':
             color = 'blue';
             break;
           case 'oauth2':
             color = 'green';
             break;
-          case 'bearer':
+          case 'token':
             color = 'purple';
             break;
           case 'basic':
             color = 'orange';
             break;
+          case 'none':
+            color = 'default';
+            break;
           default:
             color = 'default';
         }
-        return <Tag color={color}>{authType.toUpperCase()}</Tag>;
+        return <Tag color={color}>{authType ? authType.toUpperCase().replace('_', ' ') : 'NONE'}</Tag>;
       },
       filters: [
-        { text: 'API Key', value: 'apiKey' },
+        { text: 'API Key', value: 'api_key' },
         { text: 'OAuth 2.0', value: 'oauth2' },
-        { text: 'Bearer Token', value: 'bearer' },
+        { text: 'Token', value: 'token' },
         { text: 'Basic Auth', value: 'basic' },
         { text: 'None', value: 'none' },
       ],
-      onFilter: (value, record) => record.authType === value,
+      onFilter: (value, record) => record.auth_type === value,
     },
     {
       title: 'Status',
@@ -146,7 +142,7 @@ const SourcesTable = () => {
       key: 'status',
       render: (status) => (
         <Tag color={status === 'active' ? 'success' : 'error'} icon={status === 'active' ? <CheckCircleOutlined /> : <CloseCircleOutlined />}>
-          {status.toUpperCase()}
+          {status ? status.toUpperCase() : 'INACTIVE'}
         </Tag>
       ),
       filters: [
@@ -157,17 +153,27 @@ const SourcesTable = () => {
     },
     {
       title: 'Last Used',
-      dataIndex: 'lastUsed',
-      key: 'lastUsed',
-      render: (date) => new Date(date).toLocaleString(),
-      sorter: (a, b) => new Date(a.lastUsed) - new Date(b.lastUsed),
+      dataIndex: 'last_used_at',
+      key: 'last_used_at',
+      render: (date) => date ? new Date(date).toLocaleString() : 'Never',
+      sorter: (a, b) => {
+        if (!a.last_used_at && !b.last_used_at) return 0;
+        if (!a.last_used_at) return 1;
+        if (!b.last_used_at) return -1;
+        return new Date(a.last_used_at) - new Date(b.last_used_at);
+      },
     },
     {
       title: 'Created',
-      dataIndex: 'createdAt',
-      key: 'createdAt',
-      render: (date) => new Date(date).toLocaleDateString(),
-      sorter: (a, b) => new Date(a.createdAt) - new Date(b.createdAt),
+      dataIndex: 'created_at',
+      key: 'created_at',
+      render: (date) => date ? new Date(date).toLocaleDateString() : '-',
+      sorter: (a, b) => {
+        if (!a.created_at && !b.created_at) return 0;
+        if (!a.created_at) return 1;
+        if (!b.created_at) return -1;
+        return new Date(a.created_at) - new Date(b.created_at);
+      },
     },
     {
       title: 'Actions',
@@ -203,21 +209,34 @@ const SourcesTable = () => {
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
         <Title level={4}><ApiOutlined /> API Sources</Title>
-        <Button 
-          type="primary" 
-          icon={<PlusOutlined />} 
-          onClick={handleCreateSource}
-        >
-          Create Source
-        </Button>
+        <Space>
+          <Button 
+            icon={<ReloadOutlined />} 
+            onClick={fetchApiSources}
+            loading={fetching}
+          >
+            Refresh
+          </Button>
+          <Button 
+            type="primary" 
+            icon={<PlusOutlined />} 
+            onClick={handleCreateSource}
+          >
+            Create Source
+          </Button>
+        </Space>
       </div>
       
       <Table 
         rowSelection={rowSelection}
         columns={columns} 
-        dataSource={mockData}
+        dataSource={dataSource}
         rowKey="id"
         pagination={{ pageSize: 10 }}
+        loading={fetching}
+        locale={{
+          emptyText: 'No API sources found. Create your first source to get started.'
+        }}
       />
 
       <Modal

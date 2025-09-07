@@ -115,7 +115,6 @@ class ApiSourceService
             'api_key_value' => 'nullable|string|max:255',
             'api_key_location' => 'nullable|in:header,query',
             'token_config_id' => 'nullable|integer|exists:token_configs,id',
-            'save_credentials' => 'nullable|boolean',
             'status' => 'nullable|in:active,inactive',
         ];
 
@@ -162,7 +161,6 @@ class ApiSourceService
             'apiKeyValue' => 'api_key_value',
             'apiKeyLocation' => 'api_key_location',
             'tokenConfig' => 'token_config',
-            'saveCredentials' => 'save_credentials',
         ];
 
         foreach ($fieldMapping as $camelCase => $snakeCase) {

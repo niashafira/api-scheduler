@@ -50,7 +50,6 @@ export interface ApiSource {
   apiKeyValue?: string;
   apiKeyLocation?: 'header' | 'query';
   tokenConfigId?: number;
-  saveCredentials?: boolean;
   status: 'active' | 'inactive';
   lastUsedAt?: string;
   createdAt: string;
@@ -203,7 +202,6 @@ export interface SourceFormData {
   tokenConfig?: {
     selectedConfigId?: number;
   };
-  saveCredentials?: boolean;
 }
 
 export interface RequestFormData {

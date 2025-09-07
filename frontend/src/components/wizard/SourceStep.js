@@ -412,14 +412,6 @@ const SourceStep = ({ onNext, onPrevious, initialData = null, isEditMode = false
               </Button>
             </Form.Item>
 
-            <Form.Item
-              name="saveCredentials"
-              label="Save Sensitive Information"
-              valuePropName="checked"
-              tooltip="Store authentication credentials securely"
-            >
-              <Switch />
-            </Form.Item>
 
             <Divider />
 

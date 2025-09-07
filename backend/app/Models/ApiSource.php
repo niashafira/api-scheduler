@@ -22,14 +22,12 @@ class ApiSource extends Model
         'api_key_value',
         'api_key_location',
         'token_config_id',
-        'save_credentials',
         'status',
         'last_used_at',
     ];
 
     protected $casts = [
         'headers' => 'array',
-        'save_credentials' => 'boolean',
         'last_used_at' => 'datetime',
     ];
 

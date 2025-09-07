@@ -26,53 +26,60 @@ import {
   SettingOutlined
 } from '@ant-design/icons';
 import { apiService, jsonPath } from '../../utils/apiService';
+import { TokenConfig, Header } from '../../types';
 
 const { Title, Text, Paragraph } = Typography;
 const { Option } = Select;
 const { Panel } = Collapse;
 const { Step } = Steps;
 
-const TokenConfigForm = ({ initialData, onSubmit, onCancel }) => {
+interface TokenConfigFormProps {
+  initialData?: TokenConfig | null;
+  onSubmit: (formData: any) => void;
+  onCancel: () => void;
+}
+
+const TokenConfigForm: React.FC<TokenConfigFormProps> = ({ initialData, onSubmit, onCancel }) => {
   const [form] = Form.useForm();
-  const [headers, setHeaders] = useState([{ key: '', value: '' }]);
-  const [testingConnection, setTestingConnection] = useState(false);
-  const [testResult, setTestResult] = useState(null);
-  const [testStep, setTestStep] = useState('');
+  const [headers, setHeaders] = useState<Header[]>([{ key: '', value: '' }]);
+  const [testingConnection, setTestingConnection] = useState<boolean>(false);
+  const [testResult, setTestResult] = useState<any>(null);
+  const [testStep, setTestStep] = useState<string>('');
 
   useEffect(() => {
     if (initialData) {
       form.setFieldsValue({
         name: initialData.name,
-        endpoint: initialData.endpoint,
-        method: initialData.method,
-        tokenPath: initialData.tokenPath,
-        expiresInPath: initialData.expiresInPath,
+        endpoint: initialData.tokenUrl,
+        method: 'POST',
+        tokenPath: 'access_token',
+        expiresInPath: 'expires_in',
         refreshTokenPath: initialData.refreshTokenPath || '',
-        expiresIn: initialData.expiresIn || 3600,
-        refreshEnabled: initialData.refreshEnabled || false,
+        expiresIn: 3600,
+        refreshEnabled: false,
         body: initialData.body || '',
       });
       setHeaders(initialData.headers || [{ key: '', value: '' }]);
     }
   }, [initialData, form]);
 
-  const addHeader = () => {
+  const addHeader = (): void => {
     setHeaders([...headers, { key: '', value: '' }]);
   };
 
-  const removeHeader = (index) => {
+  const removeHeader = (index: number): void => {
     const updatedHeaders = [...headers];
     updatedHeaders.splice(index, 1);
     setHeaders(updatedHeaders);
   };
 
-  const updateHeader = (index, field, value) => {
+  const updateHeader = (index: number, field: 'key' | 'value', value: string): void => {
     const updatedHeaders = [...headers];
     updatedHeaders[index][field] = value;
     setHeaders(updatedHeaders);
   };
 
-  const testConnection = async () => {
+  const testConnection = async (): Promise<void> => {
     try {
       setTestingConnection(true);
       setTestResult(null);
@@ -97,7 +104,7 @@ const TokenConfigForm = ({ initialData, onSubmit, onCancel }) => {
         refreshTokenPath: formValues.refreshTokenPath,
       };
 
-      const response = await apiService.testTokenAcquisition(tokenConfig);
+      const response = await apiService.testTokenAcquisition(tokenConfig as any);
       console.log('Token response:', response);
       
       const tokenData = jsonPath.extractTokenData(response, tokenConfig);
@@ -113,7 +120,7 @@ const TokenConfigForm = ({ initialData, onSubmit, onCancel }) => {
         tokenData
       });
       message.success('Token acquisition test successful!');
-    } catch (error) {
+    } catch (error: any) {
       console.error('Test connection error:', error);
       setTestResult({ 
         success: false, 
@@ -127,7 +134,7 @@ const TokenConfigForm = ({ initialData, onSubmit, onCancel }) => {
     }
   };
 
-  const handleSubmit = (values) => {
+  const handleSubmit = (values: any): void => {
     const formData = {
       ...values,
       headers: headers.filter(h => h.key && h.value),

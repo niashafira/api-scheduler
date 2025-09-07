@@ -11,8 +11,19 @@ import {
 
 const { Title } = Typography;
 
+// Mock data interface
+interface HistoryData {
+  id: string;
+  jobName: string;
+  status: 'success' | 'failed' | 'running' | 'pending';
+  startTime: string | null;
+  endTime: string | null;
+  recordsProcessed: number;
+  errors: number;
+}
+
 // Mock data for demonstration
-const mockData = [
+const mockData: HistoryData[] = [
   {
     id: '1',
     jobName: 'Weather Data Sync',
@@ -60,8 +71,8 @@ const mockData = [
   },
 ];
 
-const History = () => {
-  const getStatusIcon = (status) => {
+const History: React.FC = () => {
+  const getStatusIcon = (status: string) => {
     switch (status) {
       case 'success':
         return <CheckCircleOutlined />;
@@ -76,7 +87,7 @@ const History = () => {
     }
   };
 
-  const getStatusColor = (status) => {
+  const getStatusColor = (status: string) => {
     switch (status) {
       case 'success':
         return 'success';
@@ -101,7 +112,7 @@ const History = () => {
       title: 'Status',
       dataIndex: 'status',
       key: 'status',
-      render: (status) => (
+      render: (status: string) => (
         <Tag icon={getStatusIcon(status)} color={getStatusColor(status)}>
           {status.toUpperCase()}
         </Tag>
@@ -112,33 +123,33 @@ const History = () => {
         { text: 'Running', value: 'running' },
         { text: 'Pending', value: 'pending' },
       ],
-      onFilter: (value, record) => record.status === value,
+      onFilter: (value: any, record: HistoryData) => record.status === value,
     },
     {
       title: 'Start Time',
       dataIndex: 'startTime',
       key: 'startTime',
-      render: (date) => date ? new Date(date).toLocaleString() : 'Not started',
-      sorter: (a, b) => {
+      render: (date: string | null) => date ? new Date(date).toLocaleString() : 'Not started',
+      sorter: (a: HistoryData, b: HistoryData) => {
         if (!a.startTime) return 1;
         if (!b.startTime) return -1;
-        return new Date(a.startTime) - new Date(b.startTime);
+        return new Date(a.startTime).getTime() - new Date(b.startTime).getTime();
       },
     },
     {
       title: 'End Time',
       dataIndex: 'endTime',
       key: 'endTime',
-      render: (date) => date ? new Date(date).toLocaleString() : 'In progress',
+      render: (date: string | null) => date ? new Date(date).toLocaleString() : 'In progress',
     },
     {
       title: 'Duration',
       key: 'duration',
-      render: (_, record) => {
+      render: (_: any, record: HistoryData) => {
         if (!record.startTime || !record.endTime) return '-';
         const start = new Date(record.startTime);
         const end = new Date(record.endTime);
-        const durationMs = end - start;
+        const durationMs = end.getTime() - start.getTime();
         const seconds = Math.floor(durationMs / 1000);
         const minutes = Math.floor(seconds / 60);
         const remainingSeconds = seconds % 60;
@@ -149,20 +160,20 @@ const History = () => {
       title: 'Records',
       dataIndex: 'recordsProcessed',
       key: 'recordsProcessed',
-      sorter: (a, b) => a.recordsProcessed - b.recordsProcessed,
+      sorter: (a: HistoryData, b: HistoryData) => a.recordsProcessed - b.recordsProcessed,
     },
     {
       title: 'Errors',
       dataIndex: 'errors',
       key: 'errors',
-      render: (errors) => (
+      render: (errors: number) => (
         errors > 0 ? <Badge count={errors} style={{ backgroundColor: '#ff4d4f' }} /> : '0'
       ),
     },
     {
       title: 'Actions',
       key: 'actions',
-      render: (_, record) => (
+      render: (_: any, record: HistoryData) => (
         <Space size="middle">
           <Button 
             type="text" 

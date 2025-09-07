@@ -1,14 +1,38 @@
+import { ApiResponse, TokenConfig, Header } from '../types';
+
+// Request options interface
+interface RequestOptions extends RequestInit {
+  headers?: Record<string, string>;
+}
+
+// Response interface
+interface TestResponse {
+  status: number;
+  statusText: string;
+  headers: Record<string, string>;
+  data: any;
+  ok: boolean;
+}
+
+// Token data interface
+interface TokenData {
+  token: string | null;
+  expiresIn: number | null;
+  refreshToken: string | null;
+  isValid: boolean;
+}
+
 // API Service for making HTTP requests
 export const apiService = {
-  async makeRequest(url, options = {}) {
-    const defaultOptions = {
+  async makeRequest(url: string, options: RequestOptions = {}): Promise<any> {
+    const defaultOptions: RequestOptions = {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
       },
     };
 
-    const requestOptions = {
+    const requestOptions: RequestOptions = {
       ...defaultOptions,
       ...options,
       headers: {
@@ -31,51 +55,52 @@ export const apiService = {
         return await response.text();
       }
     } catch (error) {
-      throw new Error(`Request failed: ${error.message}`);
+      throw new Error(`Request failed: ${(error as Error).message}`);
     }
   },
 
-  async testTokenAcquisition(tokenConfig) {
-    const { endpoint, method, headers, body } = tokenConfig;
+  async testTokenAcquisition(tokenConfig: TokenConfig): Promise<any> {
+    const { tokenUrl, grantType, clientId, clientSecret, username, password, scope, additionalParams } = tokenConfig;
     
-    // Filter out empty headers
-    const filteredHeaders = headers.filter(h => h.key && h.value);
-    const headerObj = {};
-    filteredHeaders.forEach(h => {
-      headerObj[h.key] = h.value;
-    });
-
-    // Parse body if it's a string
-    let parsedBody = body;
-    if (typeof body === 'string' && body.trim()) {
-      try {
-        parsedBody = JSON.parse(body);
-      } catch (e) {
-        // If it's not valid JSON, send as string
-        parsedBody = body;
-      }
-    }
-
-    const options = {
-      method,
-      headers: headerObj,
+    // Build request body based on grant type
+    let body: Record<string, string> = {
+      grant_type: grantType,
     };
 
-    if (method !== 'GET' && parsedBody) {
-      options.body = typeof parsedBody === 'object' ? JSON.stringify(parsedBody) : parsedBody;
+    if (grantType === 'client_credentials') {
+      if (clientId) body.client_id = clientId;
+      if (clientSecret) body.client_secret = clientSecret;
+    } else if (grantType === 'password') {
+      if (username) body.username = username;
+      if (password) body.password = password;
+      if (clientId) body.client_id = clientId;
+      if (clientSecret) body.client_secret = clientSecret;
     }
 
-    return await this.makeRequest(endpoint, options);
+    if (scope) body.scope = scope;
+    if (additionalParams) {
+      body = { ...body, ...additionalParams };
+    }
+
+    const options: RequestOptions = {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: new URLSearchParams(body).toString(),
+    };
+
+    return await this.makeRequest(tokenUrl, options);
   },
 
-  async testRegularConnection(baseUrl, headers = []) {
+  async testRegularConnection(baseUrl: string, headers: Header[] = []): Promise<any> {
     const filteredHeaders = headers.filter(h => h.key && h.value);
-    const headerObj = {};
+    const headerObj: Record<string, string> = {};
     filteredHeaders.forEach(h => {
       headerObj[h.key] = h.value;
     });
 
-    const options = {
+    const options: RequestOptions = {
       method: 'GET',
       headers: headerObj,
     };
@@ -83,14 +108,14 @@ export const apiService = {
     return await this.makeRequest(baseUrl, options);
   },
 
-  async testApiWithToken(baseUrl, token, headers = []) {
+  async testApiWithToken(baseUrl: string, token: string, headers: Header[] = []): Promise<any> {
     const filteredHeaders = headers.filter(h => h.key && h.value);
-    const headerObj = {
+    const headerObj: Record<string, string> = {
       'Authorization': `Bearer ${token}`,
       ...filteredHeaders.reduce((acc, h) => ({ ...acc, [h.key]: h.value }), {})
     };
 
-    const options = {
+    const options: RequestOptions = {
       method: 'GET',
       headers: headerObj,
     };
@@ -98,18 +123,18 @@ export const apiService = {
     return await this.makeRequest(baseUrl, options);
   },
 
-  async testCustomRequest(url, options = {}) {
+  async testCustomRequest(url: string, options: RequestOptions = {}): Promise<TestResponse> {
     try {
       const response = await fetch(url, options);
       
       // Get response headers
-      const headers = {};
+      const headers: Record<string, string> = {};
       response.headers.forEach((value, key) => {
         headers[key] = value;
       });
       
       // Get response data
-      let data;
+      let data: any;
       const contentType = response.headers.get('content-type');
       if (contentType && contentType.includes('application/json')) {
         data = await response.json();
@@ -125,18 +150,18 @@ export const apiService = {
         ok: response.ok
       };
     } catch (error) {
-      throw new Error(`Request failed: ${error.message}`);
+      throw new Error(`Request failed: ${(error as Error).message}`);
     }
   }
 };
 
 // JSON Path utility for extracting values from nested objects
 export const jsonPath = {
-  getValue(obj, path) {
+  getValue(obj: any, path: string): any {
     if (!path || !obj) return null;
     
     const keys = path.split('.');
-    let current = obj;
+    let current: any = obj;
     
     for (const key of keys) {
       if (current === null || current === undefined) {
@@ -159,11 +184,11 @@ export const jsonPath = {
     return current;
   },
 
-  extractTokenData(response, tokenConfig) {
+  extractTokenData(response: any, tokenConfig: { tokenPath: string; expiresInPath?: string; refreshTokenPath?: string }): TokenData {
     const { tokenPath, expiresInPath, refreshTokenPath } = tokenConfig;
     
     const token = this.getValue(response, tokenPath);
-    const expiresIn = this.getValue(response, expiresInPath);
+    const expiresIn = expiresInPath ? this.getValue(response, expiresInPath) : null;
     const refreshToken = refreshTokenPath ? this.getValue(response, refreshTokenPath) : null;
     
     return {

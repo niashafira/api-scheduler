@@ -17,7 +17,7 @@ import Settings from './pages/Settings';
 import WizardContainer from './components/wizard/WizardContainer';
 import EditWizardContainer from './components/wizard/EditWizardContainer';
 
-function App() {
+const App: React.FC = () => {
   return (
     <Router>
       <Routes>
@@ -34,6 +34,6 @@ function App() {
       </Routes>
     </Router>
   );
-}
+};
 
 export default App;

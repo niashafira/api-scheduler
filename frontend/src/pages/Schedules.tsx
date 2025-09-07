@@ -11,8 +11,20 @@ import {
 
 const { Title } = Typography;
 
+// Mock data interface
+interface ScheduleData {
+  id: string;
+  name: string;
+  source: string;
+  destination: string;
+  schedule: string;
+  status: 'active' | 'paused';
+  lastRun: string | null;
+  nextRun: string | null;
+}
+
 // Mock data for demonstration
-const mockData = [
+const mockData: ScheduleData[] = [
   {
     id: '1',
     name: 'Weather Data Sync',
@@ -55,13 +67,13 @@ const mockData = [
   },
 ];
 
-const Schedules = () => {
+const Schedules: React.FC = () => {
   const columns = [
     {
       title: 'Name',
       dataIndex: 'name',
       key: 'name',
-      render: (text) => <a>{text}</a>,
+      render: (text: string) => <a>{text}</a>,
     },
     {
       title: 'Source',
@@ -77,13 +89,13 @@ const Schedules = () => {
       title: 'Schedule',
       dataIndex: 'schedule',
       key: 'schedule',
-      render: (schedule) => <code>{schedule}</code>,
+      render: (schedule: string) => <code>{schedule}</code>,
     },
     {
       title: 'Status',
       dataIndex: 'status',
       key: 'status',
-      render: (status) => (
+      render: (status: 'active' | 'paused') => (
         <Tag color={status === 'active' ? 'success' : 'warning'}>
           {status.toUpperCase()}
         </Tag>
@@ -92,24 +104,24 @@ const Schedules = () => {
         { text: 'Active', value: 'active' },
         { text: 'Paused', value: 'paused' },
       ],
-      onFilter: (value, record) => record.status === value,
+      onFilter: (value: any, record: ScheduleData) => record.status === value,
     },
     {
       title: 'Last Run',
       dataIndex: 'lastRun',
       key: 'lastRun',
-      render: (date) => date ? new Date(date).toLocaleString() : 'Never',
+      render: (date: string | null) => date ? new Date(date).toLocaleString() : 'Never',
     },
     {
       title: 'Next Run',
       dataIndex: 'nextRun',
       key: 'nextRun',
-      render: (date) => date ? new Date(date).toLocaleString() : 'Not scheduled',
+      render: (date: string | null) => date ? new Date(date).toLocaleString() : 'Not scheduled',
     },
     {
       title: 'Actions',
       key: 'actions',
-      render: (_, record) => (
+      render: (_: any, record: ScheduleData) => (
         <Space size="middle">
           <Tooltip title={record.status === 'active' ? 'Pause' : 'Activate'}>
             <Button 

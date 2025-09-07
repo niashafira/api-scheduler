@@ -12,26 +12,27 @@ import {
 import { useNavigate } from 'react-router-dom';
 import TokenConfigForm from './TokenConfigForm';
 import tokenConfigApi from '../../services/tokenConfigApi';
+import { TokenConfig, TableColumnConfig, FilterOption } from '../../types';
 
 const { Title, Text } = Typography;
 
-const TokenConfigsTable = () => {
+const TokenConfigsTable: React.FC = () => {
   const navigate = useNavigate();
-  const [selectedRowKeys, setSelectedRowKeys] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [deleteModalVisible, setDeleteModalVisible] = useState(false);
-  const [configToDelete, setConfigToDelete] = useState(null);
-  const [formModalVisible, setFormModalVisible] = useState(false);
-  const [editingConfig, setEditingConfig] = useState(null);
-  const [tokenConfigs, setTokenConfigs] = useState([]);
-  const [tableLoading, setTableLoading] = useState(true);
+  const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
+  const [loading, setLoading] = useState<boolean>(false);
+  const [deleteModalVisible, setDeleteModalVisible] = useState<boolean>(false);
+  const [configToDelete, setConfigToDelete] = useState<TokenConfig | null>(null);
+  const [formModalVisible, setFormModalVisible] = useState<boolean>(false);
+  const [editingConfig, setEditingConfig] = useState<TokenConfig | null>(null);
+  const [tokenConfigs, setTokenConfigs] = useState<TokenConfig[]>([]);
+  const [tableLoading, setTableLoading] = useState<boolean>(true);
 
   // Load token configurations on component mount
   useEffect(() => {
     loadTokenConfigs();
   }, []);
 
-  const loadTokenConfigs = async () => {
+  const loadTokenConfigs = async (): Promise<void> => {
     try {
       setTableLoading(true);
       const response = await tokenConfigApi.getAllTokenConfigs();
@@ -44,30 +45,30 @@ const TokenConfigsTable = () => {
     }
   };
 
-  const handleCreateConfig = () => {
+  const handleCreateConfig = (): void => {
     setEditingConfig(null);
     setFormModalVisible(true);
   };
 
-  const handleEditConfig = (config) => {
+  const handleEditConfig = (config: TokenConfig): void => {
     setEditingConfig(config);
     setFormModalVisible(true);
   };
 
-  const handleTestConfig = (config) => {
+  const handleTestConfig = (config: TokenConfig): void => {
     console.log('Testing token config:', config);
     // Navigate to test page or open test modal
   };
 
-  const showDeleteConfirm = (config) => {
+  const showDeleteConfirm = (config: TokenConfig): void => {
     setConfigToDelete(config);
     setDeleteModalVisible(true);
   };
 
-  const handleDeleteConfirm = async () => {
+  const handleDeleteConfirm = async (): Promise<void> => {
     try {
       setLoading(true);
-      await tokenConfigApi.deleteTokenConfig(configToDelete.id);
+      await tokenConfigApi.deleteTokenConfig(configToDelete!.id);
       message.success('Token configuration deleted successfully');
       setDeleteModalVisible(false);
       setConfigToDelete(null);
@@ -80,7 +81,7 @@ const TokenConfigsTable = () => {
     }
   };
 
-  const handleFormSubmit = async (formData) => {
+  const handleFormSubmit = async (formData: any): Promise<void> => {
     try {
       if (editingConfig) {
         await tokenConfigApi.updateTokenConfig(editingConfig.id, formData);
@@ -98,13 +99,13 @@ const TokenConfigsTable = () => {
     }
   };
 
-  const columns = [
+  const columns: TableColumnConfig[] = [
     {
       title: 'Name',
       dataIndex: 'name',
       key: 'name',
-      render: (text) => <a>{text}</a>,
-      sorter: (a, b) => a.name.localeCompare(b.name),
+      render: (text: string) => <a>{text}</a>,
+      sorter: (a: TokenConfig, b: TokenConfig) => a.name.localeCompare(b.name),
     },
     {
       title: 'Endpoint',
@@ -116,25 +117,25 @@ const TokenConfigsTable = () => {
       title: 'Method',
       dataIndex: 'method',
       key: 'method',
-      render: (method) => <Tag color="blue">{method}</Tag>,
+      render: (method: string) => <Tag color="blue">{method}</Tag>,
       filters: [
         { text: 'POST', value: 'POST' },
         { text: 'GET', value: 'GET' },
         { text: 'PUT', value: 'PUT' },
-      ],
-      onFilter: (value, record) => record.method === value,
+      ] as FilterOption[],
+      onFilter: (value: any, record: TokenConfig) => record.method === value,
     },
     {
       title: 'Token Path',
       dataIndex: 'token_path',
       key: 'token_path',
-      render: (path) => <Text code>{path}</Text>,
+      render: (path: string) => <Text code>{path}</Text>,
     },
     {
       title: 'Status',
       dataIndex: 'status',
       key: 'status',
-      render: (status) => (
+      render: (status: string) => (
         <Tag color={status === 'active' ? 'success' : 'error'} icon={status === 'active' ? <CheckCircleOutlined /> : <CloseCircleOutlined />}>
           {status.toUpperCase()}
         </Tag>
@@ -142,32 +143,32 @@ const TokenConfigsTable = () => {
       filters: [
         { text: 'Active', value: 'active' },
         { text: 'Inactive', value: 'inactive' },
-      ],
-      onFilter: (value, record) => record.status === value,
+      ] as FilterOption[],
+      onFilter: (value: any, record: TokenConfig) => record.status === value,
     },
     {
       title: 'Last Used',
       dataIndex: 'lastUsedAt',
       key: 'lastUsedAt',
-      render: (date) => date ? new Date(date).toLocaleString() : 'Never',
-      sorter: (a, b) => {
+      render: (date: string | null) => date ? new Date(date).toLocaleString() : 'Never',
+      sorter: (a: TokenConfig, b: TokenConfig) => {
         if (!a.lastUsedAt && !b.lastUsedAt) return 0;
         if (!a.lastUsedAt) return 1;
         if (!b.lastUsedAt) return -1;
-        return new Date(a.lastUsedAt) - new Date(b.lastUsedAt);
+        return new Date(a.lastUsedAt!).getTime() - new Date(b.lastUsedAt!).getTime();
       },
     },
     {
       title: 'Created',
       dataIndex: 'createdAt',
       key: 'createdAt',
-      render: (date) => new Date(date).toLocaleDateString(),
-      sorter: (a, b) => new Date(a.createdAt) - new Date(b.createdAt),
+      render: (date: string) => new Date(date).toLocaleDateString(),
+      sorter: (a: TokenConfig, b: TokenConfig) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
     },
     {
       title: 'Actions',
       key: 'actions',
-      render: (_, record) => (
+      render: (_: any, record: TokenConfig) => (
         <Space size="middle">
           <Tooltip title="Test Connection">
             <Button 
@@ -198,7 +199,7 @@ const TokenConfigsTable = () => {
 
   const rowSelection = {
     selectedRowKeys,
-    onChange: (keys) => setSelectedRowKeys(keys),
+    onChange: (keys: React.Key[]) => setSelectedRowKeys(keys),
   };
 
   return (

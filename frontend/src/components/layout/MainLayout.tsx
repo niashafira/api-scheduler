@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Layout, Menu, Typography, theme } from 'antd';
+import { Layout, Menu, Typography, theme, MenuProps } from 'antd';
 import { 
   ApiOutlined, 
   ScheduleOutlined, 
@@ -15,12 +15,14 @@ import { Link, useLocation, Outlet } from 'react-router-dom';
 const { Header, Sider, Content, Footer } = Layout;
 const { Title } = Typography;
 
-const MainLayout = () => {
-  const [collapsed, setCollapsed] = useState(false);
+type MenuItem = Required<MenuProps>['items'][number];
+
+const MainLayout: React.FC = () => {
+  const [collapsed, setCollapsed] = useState<boolean>(false);
   const location = useLocation();
   const { token } = theme.useToken();
 
-  const menuItems = [
+  const menuItems: MenuItem[] = [
     {
       key: '/',
       icon: <DashboardOutlined />,

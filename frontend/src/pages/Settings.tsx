@@ -5,10 +5,21 @@ import { SaveOutlined } from '@ant-design/icons';
 const { Title } = Typography;
 const { Option } = Select;
 
-const Settings = () => {
-  const [form] = Form.useForm();
+interface SettingsFormData {
+  concurrentJobs: number;
+  defaultTimeout: number;
+  retryAttempts: number;
+  retryDelay: number;
+  notificationsEnabled: boolean;
+  notificationEmail: string;
+  logLevel: string;
+  timezone: string;
+}
 
-  const onFinish = (values) => {
+const Settings: React.FC = () => {
+  const [form] = Form.useForm<SettingsFormData>();
+
+  const onFinish = (values: SettingsFormData) => {
     console.log('Settings saved:', values);
   };
 

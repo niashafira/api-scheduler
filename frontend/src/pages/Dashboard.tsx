@@ -4,7 +4,7 @@ import { ApiOutlined, ScheduleOutlined, CheckCircleOutlined, ClockCircleOutlined
 
 const { Title } = Typography;
 
-const Dashboard = () => {
+const Dashboard: React.FC = () => {
   return (
     <div>
       <Title level={2}>Dashboard</Title>

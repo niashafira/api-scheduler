@@ -466,7 +466,7 @@ const RequestStep = ({ onNext, onPrevious, sourceData, initialData = null, isEdi
               placeholder="/api/v1/resource/{id}"
               value={endpointPath}
               onChange={(e) => setEndpointPath(e.target.value)}
-              addonBefore={apiSource.base_url}
+              addonBefore={apiSource.baseUrl}
             />
           </Form.Item>
 

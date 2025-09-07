@@ -108,12 +108,12 @@ const RequestStep = ({ onNext, onPrevious, sourceData, initialData = null, isEdi
       if (apiSourceData.authType === 'token' && apiSourceData.tokenConfigId) {
         try {
           // Fetch token config details
-          const tokenConfigResponse = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:8000/api'}/token-configs/${apiSourceData.token_config_id}`);
+          const tokenConfigResponse = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:8000/api'}/token-configs/${apiSourceData.tokenConfigId}`);
           const tokenConfigData = await tokenConfigResponse.json();
           
           if (tokenConfigData.success && tokenConfigData.data) {
             // Add token config to the API source data
-            apiSourceData.token_config = tokenConfigData.data;
+            apiSourceData.tokenConfig = tokenConfigData.data;
           }
         } catch (tokenError) {
           console.error('Failed to fetch token configuration:', tokenError);
@@ -270,31 +270,31 @@ const RequestStep = ({ onNext, onPrevious, sourceData, initialData = null, isEdi
         
         try {
           // Get the token configuration
-          const tokenConfigId = apiSource.token_config_id;
+          const tokenConfigId = apiSource.tokenConfigId;
           if (!tokenConfigId) {
             throw new Error('No token configuration associated with this API source');
           }
           
           // Fetch the token configuration details
           const tokenConfigResponse = await apiService.testTokenAcquisition({
-            endpoint: apiSource.token_config.endpoint,
-            method: apiSource.token_config.method,
-            headers: apiSource.token_config.headers || [],
-            body: apiSource.token_config.body,
-            tokenPath: apiSource.token_config.token_path,
-            expiresInPath: apiSource.token_config.expires_in_path,
-            refreshTokenPath: apiSource.token_config.refresh_token_path
+            endpoint: apiSource.tokenConfig.endpoint,
+            method: apiSource.tokenConfig.method,
+            headers: apiSource.tokenConfig.headers || [],
+            body: apiSource.tokenConfig.body,
+            tokenPath: apiSource.tokenConfig.tokenPath,
+            expiresInPath: apiSource.tokenConfig.expiresInPath,
+            refreshTokenPath: apiSource.tokenConfig.refreshTokenPath
           });
           
           // Extract token from response
-          const tokenData = jsonPath.extractTokenData(tokenConfigResponse, {
-            tokenPath: apiSource.token_config.token_path,
-            expiresInPath: apiSource.token_config.expires_in_path,
-            refreshTokenPath: apiSource.token_config.refresh_token_path
+          const tokenData = jsonPath.extractTokenData(tokenConfigResponse.fullResponse, {
+            tokenPath: apiSource.tokenConfig.tokenPath,
+            expiresInPath: apiSource.tokenConfig.expiresInPath,
+            refreshTokenPath: apiSource.tokenConfig.refreshTokenPath
           });
           
           if (!tokenData.isValid) {
-            throw new Error(`Failed to acquire token from path: ${apiSource.token_config.token_path}`);
+            throw new Error(`Failed to acquire token from path: ${apiSource.tokenConfig.tokenPath}`);
           }
           
           console.log('Token acquired successfully:', tokenData);
@@ -410,7 +410,7 @@ const RequestStep = ({ onNext, onPrevious, sourceData, initialData = null, isEdi
             description={
               <Space direction="vertical">
                 <div><Text strong>Name:</Text> {apiSource.name}</div>
-                <div><Text strong>Base URL:</Text> <Text code>{apiSource.base_url}</Text></div>
+                <div><Text strong>Base URL:</Text> <Text code>{apiSource.baseUrl}</Text></div>
                 <div><Text strong>Auth Type:</Text> <Tag color="blue">{apiSource.authType || 'None'}</Tag></div>
               </Space>
             }

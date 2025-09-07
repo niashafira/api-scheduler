@@ -74,18 +74,18 @@ const RequestStep = ({ onNext, onPrevious, sourceData, initialData = null, isEdi
     // Set request configuration
     setHttpMethod(initialData.method || 'GET');
     setEndpointPath(initialData.path || '');
-    setBodyFormat(initialData.body_format || 'json');
+    setBodyFormat(initialData.bodyFormat || 'json');
     setRequestBody(initialData.body || '');
 
     // Set parameters and headers
-    if (initialData.path_params && Array.isArray(initialData.path_params)) {
-      setPathParams(initialData.path_params.length > 0 ? initialData.path_params : [{ name: '', value: '' }]);
+    if (initialData.pathParams && Array.isArray(initialData.pathParams)) {
+      setPathParams(initialData.pathParams.length > 0 ? initialData.pathParams : [{ name: '', value: '' }]);
     } else {
       setPathParams([{ name: '', value: '' }]);
     }
 
-    if (initialData.query_params && Array.isArray(initialData.query_params)) {
-      setQueryParams(initialData.query_params.length > 0 ? initialData.query_params : [{ name: '', value: '' }]);
+    if (initialData.queryParams && Array.isArray(initialData.queryParams)) {
+      setQueryParams(initialData.queryParams.length > 0 ? initialData.queryParams : [{ name: '', value: '' }]);
     } else {
       setQueryParams([{ name: '', value: '' }]);
     }
@@ -355,11 +355,11 @@ const RequestStep = ({ onNext, onPrevious, sourceData, initialData = null, isEdi
         name: values.name || `${httpMethod} ${endpointPath || '/'}`,
         method: httpMethod,
         path: endpointPath,
-        path_params: pathParams.filter(p => p.name),
-        query_params: queryParams.filter(p => p.name),
+        pathParams: pathParams.filter(p => p.name),
+        queryParams: queryParams.filter(p => p.name),
         headers: headers.filter(h => h.key && h.value),
         body: requestBody,
-        body_format: bodyFormat,
+        bodyFormat: bodyFormat,
         status: 'active',
       };
       

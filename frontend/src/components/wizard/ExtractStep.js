@@ -131,7 +131,7 @@ const ExtractStep = ({ onNext, onPrevious, sourceData, requestData, initialData 
       if (sourceData && sourceData.authType === 'token' && sourceData.tokenConfigId) {
         try {
           // Fetch token configuration details
-          const tokenConfigResponse = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:8000/api'}/token-configs/${sourceData.token_config_id}`);
+          const tokenConfigResponse = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:8000/api'}/token-configs/${sourceData.tokenConfigId}`);
           const tokenConfigData = await tokenConfigResponse.json();
           
           if (tokenConfigData.success && tokenConfigData.data) {
@@ -143,20 +143,20 @@ const ExtractStep = ({ onNext, onPrevious, sourceData, requestData, initialData 
               method: tokenConfig.method,
               headers: tokenConfig.headers || [],
               body: tokenConfig.body,
-              tokenPath: tokenConfig.token_path,
-              expiresInPath: tokenConfig.expires_in_path,
-              refreshTokenPath: tokenConfig.refresh_token_path
+              tokenPath: tokenConfig.tokenPath,
+              expiresInPath: tokenConfig.expiresInPath,
+              refreshTokenPath: tokenConfig.refreshTokenPath
             });
             
             // Extract token from response
-            const tokenData = jsonPath.extractTokenData(tokenResponse, {
-              tokenPath: tokenConfig.token_path,
-              expiresInPath: tokenConfig.expires_in_path,
-              refreshTokenPath: tokenConfig.refresh_token_path
+            const tokenData = jsonPath.extractTokenData(tokenResponse.fullResponse, {
+              tokenPath: tokenConfig.tokenPath,
+              expiresInPath: tokenConfig.expiresInPath,
+              refreshTokenPath: tokenConfig.refreshTokenPath
             });
             
             if (!tokenData.isValid) {
-              throw new Error(`Failed to acquire token from path: ${tokenConfig.token_path}`);
+              throw new Error(`Failed to acquire token from path: ${tokenConfig.tokenPath}`);
             }
             
             // Add token to request headers
@@ -286,8 +286,8 @@ const ExtractStep = ({ onNext, onPrevious, sourceData, requestData, initialData 
     }
     
     // Replace path parameters with their values
-    if (requestData.path_params && Array.isArray(requestData.path_params)) {
-      requestData.path_params.forEach(param => {
+    if (requestData.pathParams && Array.isArray(requestData.pathParams)) {
+      requestData.pathParams.forEach(param => {
         if (param.name && param.value) {
           path = path.replace(`{${param.name}}`, encodeURIComponent(param.value));
         }
@@ -296,8 +296,8 @@ const ExtractStep = ({ onNext, onPrevious, sourceData, requestData, initialData 
     
     // Build query string
     let queryString = '';
-    if (requestData.query_params && Array.isArray(requestData.query_params)) {
-      const queryParams = requestData.query_params
+    if (requestData.queryParams && Array.isArray(requestData.queryParams)) {
+      const queryParams = requestData.queryParams
         .filter(param => param.name)
         .map(param => `${encodeURIComponent(param.name)}=${encodeURIComponent(param.value || '')}`);
       
@@ -336,7 +336,7 @@ const ExtractStep = ({ onNext, onPrevious, sourceData, requestData, initialData 
     
     // Add body for methods that support it
     if (['POST', 'PUT', 'PATCH'].includes(options.method) && requestData.body) {
-      if (requestData.body_format === 'json') {
+      if (requestData.bodyFormat === 'json') {
         try {
           options.body = JSON.parse(requestData.body);
         } catch (e) {
@@ -1006,7 +1006,6 @@ const ExtractStep = ({ onNext, onPrevious, sourceData, requestData, initialData 
                 <Select defaultValue="keep">
                   <Option value="keep">Keep as null</Option>
                   <Option value="empty">Convert to empty string</Option>
-                  <Option value="default">Use default values</Option>
                 </Select>
               </Form.Item>
               

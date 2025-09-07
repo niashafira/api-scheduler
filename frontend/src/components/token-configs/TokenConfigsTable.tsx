@@ -127,8 +127,8 @@ const TokenConfigsTable: React.FC = () => {
     },
     {
       title: 'Token Path',
-      dataIndex: 'token_path',
-      key: 'token_path',
+      dataIndex: 'tokenPath',
+      key: 'tokenPath',
       render: (path: string) => <Text code>{path}</Text>,
     },
     {

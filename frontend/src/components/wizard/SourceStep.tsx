@@ -25,21 +25,42 @@ import {
 // No need for apiService or jsonPath since we removed the test functionality
 import tokenConfigApi from '../../services/tokenConfigApi';
 import apiSourceApi from '../../services/apiSourceApi';
+import { ApiSource, TokenConfig, Header } from '../../types';
 
 const { Title, Text, Paragraph } = Typography;
 const { Option } = Select;
 const { TabPane } = Tabs;
 const { Step } = Steps;
 
-const SourceStep = ({ onNext, onPrevious, initialData = null, isEditMode = false }) => {
+interface SourceStepProps {
+  onNext?: (data: any) => void;
+  onPrevious?: () => void;
+  initialData?: ApiSource | null;
+  isEditMode?: boolean;
+}
+
+interface TokenConfigState {
+  enabled: boolean;
+  endpoint: string;
+  method: string;
+  headers: Header[];
+  body: string;
+  tokenPath: string;
+  expiresInPath: string;
+  refreshTokenPath: string;
+  expiresIn: number;
+  refreshEnabled: boolean;
+}
+
+const SourceStep: React.FC<SourceStepProps> = ({ onNext, onPrevious, initialData = null, isEditMode = false }) => {
   const [form] = Form.useForm();
-  const [authType, setAuthType] = useState('none');
-  const [headers, setHeaders] = useState([{ key: '', value: '' }]);
-  const [activeTab, setActiveTab] = useState('create');
-  const [existingTokenConfigs, setExistingTokenConfigs] = useState([]);
-  const [loadingTokenConfigs, setLoadingTokenConfigs] = useState(false);
-  const [selectedTokenConfigId, setSelectedTokenConfigId] = useState(null);
-  const [tokenConfig, setTokenConfig] = useState({
+  const [authType, setAuthType] = useState<string>('none');
+  const [headers, setHeaders] = useState<Header[]>([{ key: '', value: '' }]);
+  const [activeTab, setActiveTab] = useState<string>('create');
+  const [existingTokenConfigs, setExistingTokenConfigs] = useState<TokenConfig[]>([]);
+  const [loadingTokenConfigs, setLoadingTokenConfigs] = useState<boolean>(false);
+  const [selectedTokenConfigId, setSelectedTokenConfigId] = useState<number | null>(null);
+  const [tokenConfig, setTokenConfig] = useState<TokenConfigState>({
     enabled: false,
     endpoint: '',
     method: 'POST',
@@ -64,7 +85,7 @@ const SourceStep = ({ onNext, onPrevious, initialData = null, isEditMode = false
     }
   }, [isEditMode, initialData]);
 
-  const populateFormWithInitialData = () => {
+  const populateFormWithInitialData = (): void => {
     if (!initialData) return;
 
     // Set form values
@@ -84,17 +105,17 @@ const SourceStep = ({ onNext, onPrevious, initialData = null, isEditMode = false
 
     // Handle token configuration if auth type is token
     if (initialData.authType === 'token' && initialData.tokenConfigId) {
-      setSelectedTokenConfigId(initialData.token_config_id);
+      setSelectedTokenConfigId(initialData.tokenConfigId);
       // Load token config details
-      handleTokenConfigSelect(initialData.token_config_id);
+      handleTokenConfigSelect(initialData.tokenConfigId);
     }
   };
 
-  const fetchExistingTokenConfigs = async () => {
+  const fetchExistingTokenConfigs = async (): Promise<void> => {
     try {
       setLoadingTokenConfigs(true);
       const configs = await tokenConfigApi.getActiveTokenConfigs();
-      setExistingTokenConfigs(configs.data || configs);
+      setExistingTokenConfigs(Array.isArray(configs) ? configs : (configs.data || []));
     } catch (error) {
       console.error('Failed to fetch token configurations:', error);
       message.error('Failed to load existing token configurations');
@@ -103,7 +124,7 @@ const SourceStep = ({ onNext, onPrevious, initialData = null, isEditMode = false
     }
   };
 
-  const handleAuthTypeChange = (value) => {
+  const handleAuthTypeChange = (value: string): void => {
     setAuthType(value);
     if (value === 'token') {
       setTokenConfig({...tokenConfig, enabled: true});
@@ -113,7 +134,7 @@ const SourceStep = ({ onNext, onPrevious, initialData = null, isEditMode = false
     }
   };
 
-  const handleTokenConfigSelect = async (configId) => {
+  const handleTokenConfigSelect = async (configId: number): Promise<void> => {
     if (!configId) {
       setSelectedTokenConfigId(null);
       setTokenConfig({
@@ -134,7 +155,7 @@ const SourceStep = ({ onNext, onPrevious, initialData = null, isEditMode = false
     try {
       setLoadingTokenConfigs(true);
       // Ensure configId is treated as an integer
-      const numericId = parseInt(configId, 10);
+      const numericId = parseInt(String(configId), 10);
       if (isNaN(numericId)) {
         throw new Error('Invalid token configuration ID');
       }
@@ -145,15 +166,15 @@ const SourceStep = ({ onNext, onPrevious, initialData = null, isEditMode = false
       setSelectedTokenConfigId(numericId);
       setTokenConfig({
         enabled: true,
-        endpoint: configData.endpoint,
-        method: configData.method,
-        headers: configData.headers || [{ key: '', value: '' }],
-        body: configData.body || '',
-        tokenPath: configData.token_path,
-        expiresInPath: configData.expires_in_path,
-        refreshTokenPath: configData.refresh_token_path,
-        expiresIn: configData.expires_in || 3600,
-        refreshEnabled: configData.refresh_enabled || false
+        endpoint: (configData as any).endpoint || '',
+        method: (configData as any).method || 'POST',
+        headers: (configData as any).headers || [{ key: '', value: '' }],
+        body: (configData as any).body || '',
+        tokenPath: (configData as any).token_path || 'access_token',
+        expiresInPath: (configData as any).expires_in_path || 'expires_in',
+        refreshTokenPath: (configData as any).refresh_token_path || 'refresh_token',
+        expiresIn: (configData as any).expires_in || 3600,
+        refreshEnabled: (configData as any).refresh_enabled || false
       });
     } catch (error) {
       console.error('Failed to load token configuration:', error);
@@ -164,24 +185,24 @@ const SourceStep = ({ onNext, onPrevious, initialData = null, isEditMode = false
   };
 
 
-  const addHeader = () => {
+  const addHeader = (): void => {
     setHeaders([...headers, { key: '', value: '' }]);
   };
 
-  const removeHeader = (index) => {
+  const removeHeader = (index: number): void => {
     const updatedHeaders = [...headers];
     updatedHeaders.splice(index, 1);
     setHeaders(updatedHeaders);
   };
 
-  const updateHeader = (index, field, value) => {
+  const updateHeader = (index: number, field: 'key' | 'value', value: string): void => {
     const updatedHeaders = [...headers];
     updatedHeaders[index][field] = value;
     setHeaders(updatedHeaders);
   };
 
 
-  const handleSubmit = async (values) => {
+  const handleSubmit = async (values: any): Promise<void> => {
     try {
       console.log('Form values:', values);
       
@@ -191,7 +212,7 @@ const SourceStep = ({ onNext, onPrevious, initialData = null, isEditMode = false
         headers: headers.filter(h => h.key && h.value),
         tokenConfig: authType === 'token' ? {
           ...tokenConfig,
-          selectedConfigId: selectedTokenConfigId ? parseInt(selectedTokenConfigId, 10) : null
+          selectedConfigId: selectedTokenConfigId ? parseInt(String(selectedTokenConfigId), 10) : null
         } : null,
       };
       
@@ -211,11 +232,11 @@ const SourceStep = ({ onNext, onPrevious, initialData = null, isEditMode = false
       }
       
       // Move to next step with the source data
-      if (onNext) onNext({ ...formData, id: response.data.id });
+      if (onNext) onNext({ ...formData, id: response.data?.id });
       
     } catch (error) {
       console.error(`Failed to ${isEditMode ? 'update' : 'create'} API source:`, error);
-      message.error(`Failed to ${isEditMode ? 'update' : 'create'} API source: ` + error.message);
+      message.error(`Failed to ${isEditMode ? 'update' : 'create'} API source: ` + (error instanceof Error ? error.message : 'Unknown error'));
     }
   };
 

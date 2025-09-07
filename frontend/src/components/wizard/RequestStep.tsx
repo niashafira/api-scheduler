@@ -27,27 +27,37 @@ import {
 import { apiService, jsonPath } from '../../utils/apiService';
 import apiSourceApi from '../../services/apiSourceApi';
 import apiRequestApi from '../../services/apiRequestApi';
+import { ApiSource, ApiRequest, Header, TokenTestResponse, PathParam, QueryParam, TestResult } from '../../types';
 
 const { Title, Text } = Typography;
 const { TabPane } = Tabs;
 const { TextArea } = Input;
 const { Step } = Steps;
 
-const RequestStep = ({ onNext, onPrevious, sourceData, initialData = null, isEditMode = false }) => {
+interface RequestStepProps {
+  onNext?: (data: any) => void;
+  onPrevious?: () => void;
+  sourceData?: ApiSource | null;
+  initialData?: ApiRequest | null;
+  isEditMode?: boolean;
+}
+
+
+const RequestStep: React.FC<RequestStepProps> = ({ onNext, onPrevious, sourceData, initialData = null, isEditMode = false }) => {
   const [form] = Form.useForm();
-  const [activeTab, setActiveTab] = useState('path');
-  const [pathParams, setPathParams] = useState([]);
-  const [queryParams, setQueryParams] = useState([]);
-  const [headers, setHeaders] = useState([]);
-  const [requestBody, setRequestBody] = useState('');
-  const [testingRequest, setTestingRequest] = useState(false);
-  const [testResult, setTestResult] = useState(null);
-  const [apiSource, setApiSource] = useState(null);
-  const [endpointPath, setEndpointPath] = useState('');
-  const [httpMethod, setHttpMethod] = useState('GET');
-  const [bodyFormat, setBodyFormat] = useState('json');
-  const [loading, setLoading] = useState(false);
-  const [testStep, setTestStep] = useState('');
+  const [activeTab, setActiveTab] = useState<string>('path');
+  const [pathParams, setPathParams] = useState<PathParam[]>([]);
+  const [queryParams, setQueryParams] = useState<QueryParam[]>([]);
+  const [headers, setHeaders] = useState<Header[]>([]);
+  const [requestBody, setRequestBody] = useState<string>('');
+  const [testingRequest, setTestingRequest] = useState<boolean>(false);
+  const [testResult, setTestResult] = useState<TestResult | null>(null);
+  const [apiSource, setApiSource] = useState<ApiSource | null>(null);
+  const [endpointPath, setEndpointPath] = useState<string>('');
+  const [httpMethod, setHttpMethod] = useState<string>('GET');
+  const [bodyFormat, setBodyFormat] = useState<string>('json');
+  const [loading, setLoading] = useState<boolean>(false);
+  const [testStep, setTestStep] = useState<string>('');
 
   // Fetch API source data when component mounts
   useEffect(() => {
@@ -63,7 +73,7 @@ const RequestStep = ({ onNext, onPrevious, sourceData, initialData = null, isEdi
     }
   }, [isEditMode, initialData]);
 
-  const populateFormWithInitialData = () => {
+  const populateFormWithInitialData = (): void => {
     if (!initialData) return;
 
     // Set form values
@@ -79,15 +89,15 @@ const RequestStep = ({ onNext, onPrevious, sourceData, initialData = null, isEdi
 
     // Set parameters and headers
     if (initialData.pathParams && Array.isArray(initialData.pathParams)) {
-      setPathParams(initialData.pathParams.length > 0 ? initialData.pathParams : [{ name: '', value: '' }]);
+      setPathParams(initialData.pathParams.length > 0 ? initialData.pathParams : [{ name: '', value: '', required: true }]);
     } else {
-      setPathParams([{ name: '', value: '' }]);
+      setPathParams([{ name: '', value: '', required: true }]);
     }
 
     if (initialData.queryParams && Array.isArray(initialData.queryParams)) {
-      setQueryParams(initialData.queryParams.length > 0 ? initialData.queryParams : [{ name: '', value: '' }]);
+      setQueryParams(initialData.queryParams.length > 0 ? initialData.queryParams : [{ name: '', value: '', required: false }]);
     } else {
-      setQueryParams([{ name: '', value: '' }]);
+      setQueryParams([{ name: '', value: '', required: false }]);
     }
 
     if (initialData.headers && Array.isArray(initialData.headers)) {
@@ -97,7 +107,7 @@ const RequestStep = ({ onNext, onPrevious, sourceData, initialData = null, isEdi
     }
   };
 
-  const fetchApiSource = async (id) => {
+  const fetchApiSource = async (id: number): Promise<void> => {
     try {
       setLoading(true);
       const response = await apiSourceApi.getApiSource(id);
@@ -105,7 +115,7 @@ const RequestStep = ({ onNext, onPrevious, sourceData, initialData = null, isEdi
       // If token-based auth, fetch the token config details
       let apiSourceData = response.data;
       
-      if (apiSourceData.authType === 'token' && apiSourceData.tokenConfigId) {
+      if (apiSourceData && apiSourceData.authType === 'token' && apiSourceData.tokenConfigId) {
         try {
           // Fetch token config details
           const tokenConfigResponse = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:8000/api'}/token-configs/${apiSourceData.tokenConfigId}`);
@@ -113,17 +123,17 @@ const RequestStep = ({ onNext, onPrevious, sourceData, initialData = null, isEdi
           
           if (tokenConfigData.success && tokenConfigData.data) {
             // Add token config to the API source data
-            apiSourceData.tokenConfig = tokenConfigData.data;
+            (apiSourceData as any).tokenConfig = tokenConfigData.data;
           }
         } catch (tokenError) {
           console.error('Failed to fetch token configuration:', tokenError);
         }
       }
       
-      setApiSource(apiSourceData);
+      setApiSource(apiSourceData || null);
       
       // Initialize headers from source if available
-      if (apiSourceData.headers && Array.isArray(apiSourceData.headers)) {
+      if (apiSourceData && apiSourceData.headers && Array.isArray(apiSourceData.headers)) {
         setHeaders(apiSourceData.headers);
       }
     } catch (error) {
@@ -134,55 +144,55 @@ const RequestStep = ({ onNext, onPrevious, sourceData, initialData = null, isEdi
     }
   };
 
-  const addPathParam = () => {
+  const addPathParam = (): void => {
     setPathParams([...pathParams, { name: '', value: '', required: true }]);
   };
 
-  const removePathParam = (index) => {
+  const removePathParam = (index: number): void => {
     const updatedParams = [...pathParams];
     updatedParams.splice(index, 1);
     setPathParams(updatedParams);
   };
 
-  const updatePathParam = (index, field, value) => {
+  const updatePathParam = (index: number, field: keyof PathParam, value: string | boolean): void => {
     const updatedParams = [...pathParams];
-    updatedParams[index][field] = value;
+    (updatedParams[index] as any)[field] = value;
     setPathParams(updatedParams);
   };
 
-  const addQueryParam = () => {
+  const addQueryParam = (): void => {
     setQueryParams([...queryParams, { name: '', value: '', required: false }]);
   };
 
-  const removeQueryParam = (index) => {
+  const removeQueryParam = (index: number): void => {
     const updatedParams = [...queryParams];
     updatedParams.splice(index, 1);
     setQueryParams(updatedParams);
   };
 
-  const updateQueryParam = (index, field, value) => {
+  const updateQueryParam = (index: number, field: keyof QueryParam, value: string | boolean): void => {
     const updatedParams = [...queryParams];
-    updatedParams[index][field] = value;
+    (updatedParams[index] as any)[field] = value;
     setQueryParams(updatedParams);
   };
 
-  const addHeader = () => {
+  const addHeader = (): void => {
     setHeaders([...headers, { key: '', value: '' }]);
   };
 
-  const removeHeader = (index) => {
+  const removeHeader = (index: number): void => {
     const updatedHeaders = [...headers];
     updatedHeaders.splice(index, 1);
     setHeaders(updatedHeaders);
   };
 
-  const updateHeader = (index, field, value) => {
+  const updateHeader = (index: number, field: 'key' | 'value', value: string): void => {
     const updatedHeaders = [...headers];
     updatedHeaders[index][field] = value;
     setHeaders(updatedHeaders);
   };
 
-  const buildFullUrl = () => {
+  const buildFullUrl = (): string => {
     if (!apiSource || !apiSource.baseUrl) return '';
     
     // Remove trailing slash from base URL if present
@@ -223,7 +233,7 @@ const RequestStep = ({ onNext, onPrevious, sourceData, initialData = null, isEdi
     return `${baseUrl}${processedPath}${queryString ? '?' + queryString : ''}`;
   };
 
-  const testRequest = async () => {
+  const testRequest = async (): Promise<void> => {
     try {
       setTestingRequest(true);
       setTestResult(null);
@@ -238,7 +248,7 @@ const RequestStep = ({ onNext, onPrevious, sourceData, initialData = null, isEdi
       }
       
       // Prepare headers
-      const headerObj = {};
+      const headerObj: Record<string, string> = {};
       headers.forEach(header => {
         if (header.key && header.value) {
           headerObj[header.key] = header.value;
@@ -246,7 +256,7 @@ const RequestStep = ({ onNext, onPrevious, sourceData, initialData = null, isEdi
       });
       
       // Prepare request options
-      const options = {
+      const options: { method: string; headers: Record<string, string>; body?: any } = {
         method: httpMethod,
         headers: headerObj,
       };
@@ -265,7 +275,7 @@ const RequestStep = ({ onNext, onPrevious, sourceData, initialData = null, isEdi
       }
       
       // Handle token-based authentication
-      if (apiSource && apiSource.authType === 'token' && apiSource.tokenConfig) {
+      if (apiSource && apiSource.authType === 'token' && (apiSource as any).tokenConfig) {
         setTestStep('Acquiring token...');
         
         try {
@@ -276,25 +286,26 @@ const RequestStep = ({ onNext, onPrevious, sourceData, initialData = null, isEdi
           }
           
           // Fetch the token configuration details
+          const tokenConfig = (apiSource as any).tokenConfig;
           const tokenConfigResponse = await apiService.testTokenAcquisition({
-            endpoint: apiSource.tokenConfig.endpoint,
-            method: apiSource.tokenConfig.method,
-            headers: apiSource.tokenConfig.headers || [],
-            body: apiSource.tokenConfig.body,
-            tokenPath: apiSource.tokenConfig.tokenPath,
-            expiresInPath: apiSource.tokenConfig.expiresInPath,
-            refreshTokenPath: apiSource.tokenConfig.refreshTokenPath
+            endpoint: tokenConfig.endpoint,
+            method: tokenConfig.method,
+            headers: tokenConfig.headers || [],
+            body: tokenConfig.body,
+            tokenPath: tokenConfig.tokenPath,
+            expiresInPath: tokenConfig.expiresInPath,
+            refreshTokenPath: tokenConfig.refreshTokenPath
           });
           
           // Extract token from response
           const tokenData = jsonPath.extractTokenData(tokenConfigResponse.fullResponse, {
-            tokenPath: apiSource.tokenConfig.tokenPath,
-            expiresInPath: apiSource.tokenConfig.expiresInPath,
-            refreshTokenPath: apiSource.tokenConfig.refreshTokenPath
+            tokenPath: tokenConfig.tokenPath,
+            expiresInPath: tokenConfig.expiresInPath,
+            refreshTokenPath: tokenConfig.refreshTokenPath
           });
           
           if (!tokenData.isValid) {
-            throw new Error(`Failed to acquire token from path: ${apiSource.tokenConfig.tokenPath}`);
+            throw new Error(`Failed to acquire token from path: ${tokenConfig.tokenPath}`);
           }
           
           console.log('Token acquired successfully:', tokenData);
@@ -304,7 +315,7 @@ const RequestStep = ({ onNext, onPrevious, sourceData, initialData = null, isEdi
           
           setTestStep('Testing API with token...');
         } catch (tokenError) {
-          throw new Error(`Token acquisition failed: ${tokenError.message}`);
+          throw new Error(`Token acquisition failed: ${tokenError instanceof Error ? tokenError.message : 'Unknown error'}`);
         }
       }
       
@@ -312,7 +323,7 @@ const RequestStep = ({ onNext, onPrevious, sourceData, initialData = null, isEdi
       const response = await apiService.testCustomRequest(fullUrl, options);
       
       // Prepare test result
-      const result = {
+      const result: TestResult = {
         success: true,
         statusCode: response.status,
         data: response.data,
@@ -333,13 +344,16 @@ const RequestStep = ({ onNext, onPrevious, sourceData, initialData = null, isEdi
       message.success('Test request completed successfully');
     } catch (error) {
       console.error('Test request failed:', error);
-      
+
       setTestResult({
         success: false,
-        message: `Request failed: ${error.message}`,
-        error: error.message,
+        statusCode: (error as any)?.response?.status ?? null,
+        data: (error as any)?.response?.data ?? null,
+        headers: (error as any)?.response?.headers ?? null,
+        message: `Request failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        error: error instanceof Error ? error.message : 'Unknown error',
       });
-      
+
       message.error('Test request failed');
     } finally {
       setTestingRequest(false);
@@ -347,19 +361,19 @@ const RequestStep = ({ onNext, onPrevious, sourceData, initialData = null, isEdi
     }
   };
 
-  const handleSubmit = async (values) => {
+  const handleSubmit = async (values: any): Promise<void> => {
     try {
       // Process form values
       const formData = {
         apiSourceId: sourceData?.id,
         name: values.name || `${httpMethod} ${endpointPath || '/'}`,
-        method: httpMethod,
+        method: httpMethod as 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH',
         path: endpointPath,
         pathParams: pathParams.filter(p => p.name),
         queryParams: queryParams.filter(p => p.name),
         headers: headers.filter(h => h.key && h.value),
         body: requestBody,
-        bodyFormat: bodyFormat,
+        bodyFormat: bodyFormat as 'json' | 'form' | 'raw',
         status: 'active',
       };
       
@@ -381,12 +395,12 @@ const RequestStep = ({ onNext, onPrevious, sourceData, initialData = null, isEdi
       // Move to next step with the request data
       if (onNext) onNext({ 
         ...formData, 
-        id: response.data.id,
+        id: response.data?.id,
         apiSource: apiSource
       });
     } catch (error) {
       console.error(`Failed to ${isEditMode ? 'update' : 'create'} API request:`, error);
-      message.error(`Failed to ${isEditMode ? 'update' : 'create'} API request: ` + error.message);
+      message.error(`Failed to ${isEditMode ? 'update' : 'create'} API request: ` + (error instanceof Error ? error.message : 'Unknown error'));
     }
   };
 

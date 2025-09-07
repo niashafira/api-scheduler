@@ -5,17 +5,30 @@ import { useNavigate } from 'react-router-dom';
 import SourceStep from './SourceStep';
 import RequestStep from './RequestStep';
 import ExtractStep from './ExtractStep';
+import { ApiSource, ApiRequest, ApiExtract } from '../../types';
 
 const { Step } = Steps;
 const { Title } = Typography;
 
-const WizardContainer = () => {
+interface WizardData {
+  source: ApiSource | null;
+  request: ApiRequest | null;
+  extract: ApiExtract | null;
+  schema: any;
+  destination: any;
+  loadStrategy: any;
+  pagination: any;
+  schedule: any;
+  review: any;
+}
+
+const WizardContainer: React.FC = () => {
   const navigate = useNavigate();
-  const [currentStep, setCurrentStep] = useState(0);
-  const [wizardData, setWizardData] = useState({
-    source: {},
-    request: {},
-    extract: {},
+  const [currentStep, setCurrentStep] = useState<number>(0);
+  const [wizardData, setWizardData] = useState<WizardData>({
+    source: null,
+    request: null,
+    extract: null,
     schema: {},
     destination: {},
     loadStrategy: {},
@@ -97,7 +110,7 @@ const WizardContainer = () => {
     }
   ];
 
-  const handleBack = () => {
+  const handleBack = (): void => {
     if (currentStep === 0) {
       navigate('/sources');
     } else {

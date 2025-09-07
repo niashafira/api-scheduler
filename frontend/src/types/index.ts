@@ -50,6 +50,7 @@ export interface ApiSource {
   apiKeyValue?: string;
   apiKeyLocation?: 'header' | 'query';
   tokenConfigId?: number;
+  tokenConfig?: TokenConfig;
   status: 'active' | 'inactive';
   lastUsedAt?: string;
   createdAt: string;
@@ -83,11 +84,13 @@ export interface ApiRequest {
 export interface PathParam {
   name: string;
   value: string;
+  required: boolean;
 }
 
 export interface QueryParam {
   name: string;
   value: string;
+  required: boolean;
 }
 
 // API Extract Types
@@ -112,6 +115,8 @@ export interface ApiExtract {
 export interface ExtractionPath {
   name: string;
   path: string;
+  description: string;
+  required: boolean;
   dataType: 'string' | 'number' | 'boolean' | 'date' | 'array' | 'object';
 }
 
@@ -139,6 +144,10 @@ export interface TokenConfig {
   method?: string;
   endpoint?: string;
   token_path?: string;
+  expires_in_path?: string;
+  refresh_token_path?: string;
+  expires_in?: number;
+  refresh_enabled?: boolean;
   status: 'active' | 'inactive';
   lastUsedAt?: string;
   createdAt: string;
@@ -171,6 +180,17 @@ export interface ApiTestResponse {
   headers: Record<string, string>;
   data: any;
   ok: boolean;
+}
+
+export interface TestResult {
+  success: boolean;
+  statusCode: number;
+  data: any;
+  headers: Record<string, string>;
+  message: string;
+  tokenUsed?: boolean;
+  token?: string;
+  error?: string;
 }
 
 // Dynamic Table Types

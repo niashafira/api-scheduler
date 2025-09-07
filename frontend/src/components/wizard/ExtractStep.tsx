@@ -28,26 +28,36 @@ import {
 } from '@ant-design/icons';
 import { apiService, jsonPath } from '../../utils/apiService';
 import apiExtractApi from '../../services/apiExtractApi';
+import { ApiSource, ApiRequest, ApiExtract, ExtractionPath } from '../../types';
 
 const { Title, Text } = Typography;
 const { Option } = Select;
 const { TabPane } = Tabs;
 const { TextArea } = Input;
 
-const ExtractStep = ({ onNext, onPrevious, sourceData, requestData, initialData = null, isEditMode = false }) => {
+interface ExtractStepProps {
+  onNext?: (data: any) => void;
+  onPrevious?: () => void;
+  sourceData?: ApiSource | null;
+  requestData?: ApiRequest | null;
+  initialData?: ApiExtract | null;
+  isEditMode?: boolean;
+}
+
+const ExtractStep: React.FC<ExtractStepProps> = ({ onNext, onPrevious, sourceData, requestData, initialData = null, isEditMode = false }) => {
   const [form] = Form.useForm();
-  const [activeTab, setActiveTab] = useState('preview');
-  const [responseData, setResponseData] = useState(null);
-  const [loading, setLoading] = useState(false);
-  const [extractionPaths, setExtractionPaths] = useState([
+  const [activeTab, setActiveTab] = useState<string>('preview');
+  const [responseData, setResponseData] = useState<any>(null);
+  const [loading, setLoading] = useState<boolean>(false);
+  const [extractionPaths, setExtractionPaths] = useState<ExtractionPath[]>([
     { name: 'items', path: 'data', description: 'Main data array', required: true, dataType: 'array' }
   ]);
-  const [selectedPath, setSelectedPath] = useState(null);
-  const [extractionPreview, setExtractionPreview] = useState(null);
-  const [extractionError, setExtractionError] = useState(null);
-  const [rootArrayPath, setRootArrayPath] = useState('');
-  const [primaryKeyFields, setPrimaryKeyFields] = useState([]);
-  const [dataTypes] = useState([
+  const [selectedPath, setSelectedPath] = useState<number | null>(null);
+  const [extractionPreview, setExtractionPreview] = useState<any>(null);
+  const [extractionError, setExtractionError] = useState<string | null>(null);
+  const [rootArrayPath, setRootArrayPath] = useState<string>('');
+  const [primaryKeyFields, setPrimaryKeyFields] = useState<string[]>([]);
+  const [dataTypes] = useState<{ value: string; label: string }[]>([
     { value: 'string', label: 'String' },
     { value: 'number', label: 'Number' },
     { value: 'boolean', label: 'Boolean' },
@@ -60,7 +70,7 @@ const ExtractStep = ({ onNext, onPrevious, sourceData, requestData, initialData 
   useEffect(() => {
     console.log('ExtractStep useEffect - requestData:', requestData);
     console.log('ExtractStep useEffect - sourceData:', sourceData);
-    let sourceDataBaseUrl = sourceData.baseUrl;
+    let sourceDataBaseUrl = sourceData?.baseUrl;
     
     if (requestData && requestData.id && sourceData && sourceDataBaseUrl) {
       console.log('ExtractStep - Calling fetchTestResponse');
@@ -82,24 +92,24 @@ const ExtractStep = ({ onNext, onPrevious, sourceData, requestData, initialData 
     }
   }, [isEditMode, initialData]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const populateFormWithInitialData = () => {
+  const populateFormWithInitialData = (): void => {
     if (!initialData) return;
 
     // Set form values
     form.setFieldsValue({
       name: initialData.name || '',
-      nullValueHandling: initialData.null_value_handling || 'keep',
-      dateFormat: initialData.date_format || '',
-      transformScript: initialData.transform_script || ''
+      nullValueHandling: initialData.nullValueHandling || 'keep',
+      dateFormat: initialData.dateFormat || '',
+      transformScript: initialData.transformScript || ''
     });
 
     // Set extraction configuration
-    setRootArrayPath(initialData.root_array_path || '');
-    setPrimaryKeyFields(initialData.primary_key_fields || []);
+    setRootArrayPath(initialData.rootArrayPath || '');
+    setPrimaryKeyFields(initialData.primaryKeyFields || []);
 
     // Set extraction paths
-    if (initialData.extraction_paths && Array.isArray(initialData.extraction_paths)) {
-      setExtractionPaths(initialData.extraction_paths.length > 0 ? initialData.extraction_paths : [{
+    if (initialData.extractionPaths && Array.isArray(initialData.extractionPaths)) {
+      setExtractionPaths(initialData.extractionPaths.length > 0 ? initialData.extractionPaths : [{
         name: 'items',
         path: 'data',
         description: 'Main data array',
@@ -109,7 +119,7 @@ const ExtractStep = ({ onNext, onPrevious, sourceData, requestData, initialData 
     }
   };
 
-  const fetchTestResponse = async () => {
+  const fetchTestResponse = async (): Promise<void> => {
     try {
       setLoading(true);
       
@@ -164,7 +174,7 @@ const ExtractStep = ({ onNext, onPrevious, sourceData, requestData, initialData 
           }
         } catch (tokenError) {
           console.error('Token acquisition failed:', tokenError);
-          throw new Error(`Token acquisition failed: ${tokenError.message}`);
+          throw new Error(`Token acquisition failed: ${tokenError instanceof Error ? tokenError.message : 'Unknown error'}`);
         }
       }
       
@@ -195,7 +205,7 @@ const ExtractStep = ({ onNext, onPrevious, sourceData, requestData, initialData 
       message.success('API request executed successfully');
     } catch (error) {
       console.error('Failed to fetch test response:', error);
-      message.error('Failed to load test response data: ' + error.message);
+      message.error('Failed to load test response data: ' + (error instanceof Error ? error.message : 'Unknown error'));
       
       // Fallback to mock data for development purposes
       const mockResponse = {
@@ -229,7 +239,7 @@ const ExtractStep = ({ onNext, onPrevious, sourceData, requestData, initialData 
   };
   
   // Parse and normalize response data
-  const parseResponseData = (data) => {
+  const parseResponseData = (data: any): any => {
     // If data is already an object, return it
     if (data !== null && typeof data === 'object') {
       return data;
@@ -254,7 +264,7 @@ const ExtractStep = ({ onNext, onPrevious, sourceData, requestData, initialData 
   };
   
   // Build the full request URL from the request data
-  const buildRequestUrl = () => {
+  const buildRequestUrl = (): string => {
     console.log('buildRequestUrl - sourceData:', sourceData);
     console.log('buildRequestUrl - requestData:', requestData);
     
@@ -313,10 +323,10 @@ const ExtractStep = ({ onNext, onPrevious, sourceData, requestData, initialData 
   };
   
   // Build the request options from the request data
-  const buildRequestOptions = () => {
+  const buildRequestOptions = (): any => {
     if (!requestData) return { method: 'GET' };
     
-    const options = {
+    const options: any = {
       method: requestData.method || 'GET',
       headers: {
         // Add default headers for JSON
@@ -350,7 +360,7 @@ const ExtractStep = ({ onNext, onPrevious, sourceData, requestData, initialData 
     return options;
   };
 
-  const detectRootArrayPaths = (data) => {
+  const detectRootArrayPaths = (data: any): void => {
     // Check if data is not a proper object (e.g., HTML response)
     if (!data || typeof data !== 'object' || data.rawContent) {
       setExtractionPaths([{
@@ -358,16 +368,22 @@ const ExtractStep = ({ onNext, onPrevious, sourceData, requestData, initialData 
         path: '',
         description: 'Data field',
         required: true,
-        dataType: 'string'
+        dataType: 'string' as const
       }]);
       return;
     }
     
     // Find all paths that lead to arrays in the response
-    const arrayPaths = [];
-    const arrayPathsWithInfo = [];
+    const arrayPaths: string[] = [];
+    const arrayPathsWithInfo: Array<{
+      path: string;
+      length: number;
+      sampleFields: string[];
+      depth: number;
+      isNested: boolean;
+    }> = [];
     
-    const findArrays = (obj, path = '') => {
+    const findArrays = (obj: any, path: string = ''): void => {
       if (!obj) return;
       
       if (Array.isArray(obj)) {
@@ -401,7 +417,7 @@ const ExtractStep = ({ onNext, onPrevious, sourceData, requestData, initialData 
         path: '',
         description: 'Data field',
         required: true,
-        dataType: 'string'
+        dataType: 'string' as const
       }]);
       return;
     }
@@ -419,8 +435,8 @@ const ExtractStep = ({ onNext, onPrevious, sourceData, requestData, initialData 
       
       // Common data field names that suggest this is the main data array
       const dataFieldNames = ['id', 'name', 'title', 'description', 'createdAt', 'updatedAt'];
-      const aScore = a.sampleFields.filter(f => dataFieldNames.includes(f)).length;
-      const bScore = b.sampleFields.filter(f => dataFieldNames.includes(f)).length;
+      const aScore = a.sampleFields.filter((f: string) => dataFieldNames.includes(f)).length;
+      const bScore = b.sampleFields.filter((f: string) => dataFieldNames.includes(f)).length;
       
       if (aScore !== bScore) return bScore - aScore;
       
@@ -445,13 +461,13 @@ const ExtractStep = ({ onNext, onPrevious, sourceData, requestData, initialData 
       const arrayData = jsonPath.getValue(data, bestPath);
       
       // Update the default extraction path for items
-      let updatedPaths = [];
+      let updatedPaths: ExtractionPath[] = [];
       
       if (Array.isArray(arrayData) && arrayData.length > 0 && typeof arrayData[0] === 'object') {
         // Create extraction paths for each field in the first array item
         updatedPaths = Object.keys(arrayData[0]).map((key, index) => {
           // Guess data type
-          let dataType = 'string';
+          let dataType: 'string' | 'number' | 'boolean' | 'date' | 'array' | 'object' = 'string';
           const sampleValue = arrayData[0][key];
           
           if (typeof sampleValue === 'number') dataType = 'number';
@@ -487,7 +503,7 @@ const ExtractStep = ({ onNext, onPrevious, sourceData, requestData, initialData 
           path: '',
           description: 'Main data array',
           required: true,
-          dataType: 'array'
+          dataType: 'array' as const
         }];
       }
       
@@ -495,36 +511,36 @@ const ExtractStep = ({ onNext, onPrevious, sourceData, requestData, initialData 
     }
   };
 
-  const addExtractionPath = () => {
+  const addExtractionPath = (): void => {
     setExtractionPaths([
       ...extractionPaths,
-      { name: '', path: '', description: '', required: false, dataType: 'string' }
+      { name: '', path: '', description: '', required: false, dataType: 'string' as const }
     ]);
   };
 
-  const removeExtractionPath = (index) => {
+  const removeExtractionPath = (index: number): void => {
     const updatedPaths = [...extractionPaths];
     updatedPaths.splice(index, 1);
     setExtractionPaths(updatedPaths);
   };
 
-  const updateExtractionPath = (index, field, value) => {
+  const updateExtractionPath = (index: number, field: keyof ExtractionPath, value: string | boolean): void => {
     const updatedPaths = [...extractionPaths];
-    updatedPaths[index][field] = value;
+    (updatedPaths[index] as any)[field] = value;
     setExtractionPaths(updatedPaths);
   };
 
-  const addPrimaryKeyField = (fieldName) => {
+  const addPrimaryKeyField = (fieldName: string): void => {
     if (fieldName && !primaryKeyFields.includes(fieldName)) {
       setPrimaryKeyFields([...primaryKeyFields, fieldName]);
     }
   };
 
-  const removePrimaryKeyField = (fieldName) => {
+  const removePrimaryKeyField = (fieldName: string): void => {
     setPrimaryKeyFields(primaryKeyFields.filter(field => field !== fieldName));
   };
 
-  const togglePrimaryKeyField = (fieldName) => {
+  const togglePrimaryKeyField = (fieldName: string): void => {
     if (primaryKeyFields.includes(fieldName)) {
       removePrimaryKeyField(fieldName);
     } else {
@@ -532,7 +548,7 @@ const ExtractStep = ({ onNext, onPrevious, sourceData, requestData, initialData 
     }
   };
 
-  const testExtraction = (path, index) => {
+  const testExtraction = (path: string, index: number): void => {
     try {
       setSelectedPath(index);
       setExtractionError(null);
@@ -567,7 +583,7 @@ const ExtractStep = ({ onNext, onPrevious, sourceData, requestData, initialData 
         setExtractionPreview(extracted);
         
         // Update the data type based on the extracted value
-        let detectedType = 'string';
+        let detectedType: 'string' | 'number' | 'boolean' | 'date' | 'array' | 'object' = 'string';
         if (typeof extracted === 'number') detectedType = 'number';
         else if (typeof extracted === 'boolean') detectedType = 'boolean';
         else if (Array.isArray(extracted)) detectedType = 'array';
@@ -586,12 +602,12 @@ const ExtractStep = ({ onNext, onPrevious, sourceData, requestData, initialData 
       }
     } catch (error) {
       console.error('Extraction error:', error);
-      setExtractionError(`Error extracting data: ${error.message}`);
+      setExtractionError(`Error extracting data: ${error instanceof Error ? error.message : 'Unknown error'}`);
       setExtractionPreview(null);
     }
   };
 
-  const handleSubmit = async (values) => {
+  const handleSubmit = async (values: any): Promise<void> => {
     try {
       // Filter out empty extraction paths
       const filteredPaths = extractionPaths.filter(p => p.name && p.path);
@@ -638,18 +654,18 @@ const ExtractStep = ({ onNext, onPrevious, sourceData, requestData, initialData 
       if (onNext) {
         onNext({
           ...formData,
-          id: response.data.id,
+          id: response.data?.id,
           apiRequest: requestData,
           apiSource: sourceData
         });
       }
     } catch (error) {
       console.error(`Failed to ${isEditMode ? 'update' : 'save'} extraction configuration:`, error);
-      message.error(`Failed to ${isEditMode ? 'update' : 'save'} extraction configuration: ` + error.message);
+      message.error(`Failed to ${isEditMode ? 'update' : 'save'} extraction configuration: ` + (error instanceof Error ? error.message : 'Unknown error'));
     }
   };
 
-  const renderJsonPreview = (data) => {
+  const renderJsonPreview = (data: any): React.ReactNode => {
     if (!data) return <Empty description="No data available" />;
     
     // Handle HTML or text content
@@ -696,7 +712,7 @@ const ExtractStep = ({ onNext, onPrevious, sourceData, requestData, initialData 
       title: 'Field Name',
       dataIndex: 'name',
       key: 'name',
-      render: (text, record, index) => (
+      render: (text: string, record: ExtractionPath, index: number) => (
         <Input
           placeholder="e.g., id, name, createdAt"
           value={text}
@@ -708,7 +724,7 @@ const ExtractStep = ({ onNext, onPrevious, sourceData, requestData, initialData 
       title: 'JSON Path',
       dataIndex: 'path',
       key: 'path',
-      render: (text, record, index) => (
+      render: (text: string, record: ExtractionPath, index: number) => (
         <Input
           placeholder="e.g., data.id, results[0].name"
           value={text}
@@ -729,7 +745,7 @@ const ExtractStep = ({ onNext, onPrevious, sourceData, requestData, initialData 
       dataIndex: 'dataType',
       key: 'dataType',
       width: 120,
-      render: (text, record, index) => (
+      render: (text: string, record: ExtractionPath, index: number) => (
         <Select
           style={{ width: '100%' }}
           value={text}
@@ -746,7 +762,7 @@ const ExtractStep = ({ onNext, onPrevious, sourceData, requestData, initialData 
       dataIndex: 'required',
       key: 'required',
       width: 80,
-      render: (value, record, index) => (
+      render: (value: boolean, record: ExtractionPath, index: number) => (
         <Switch
           checked={value}
           onChange={(checked) => updateExtractionPath(index, 'required', checked)}
@@ -757,7 +773,7 @@ const ExtractStep = ({ onNext, onPrevious, sourceData, requestData, initialData 
       title: 'Description',
       dataIndex: 'description',
       key: 'description',
-      render: (text, record, index) => (
+      render: (text: string, record: ExtractionPath, index: number) => (
         <Input
           placeholder="Field description"
           value={text}
@@ -769,7 +785,7 @@ const ExtractStep = ({ onNext, onPrevious, sourceData, requestData, initialData 
       title: 'Actions',
       key: 'actions',
       width: 80,
-      render: (_, record, index) => (
+      render: (_: any, record: ExtractionPath, index: number) => (
         <Button
           type="text"
           danger
@@ -931,7 +947,7 @@ const ExtractStep = ({ onNext, onPrevious, sourceData, requestData, initialData 
                 dataSource={extractionPaths}
                 columns={extractionColumns}
                 pagination={false}
-                rowKey={(record, index) => index.toString()}
+                rowKey={(record, index) => (index ?? 0).toString()}
                 style={{ marginBottom: 16 }}
               />
               
@@ -968,7 +984,7 @@ const ExtractStep = ({ onNext, onPrevious, sourceData, requestData, initialData 
                   ) : extractionPreview !== null ? (
                     <div>
                       <div style={{ marginBottom: 8 }}>
-                        <Text strong>Path:</Text> <Text code>{extractionPaths[selectedPath]?.path}</Text>
+                        <Text strong>Path:</Text> <Text code>{selectedPath !== null ? extractionPaths[selectedPath]?.path : ''}</Text>
                       </div>
                       <div style={{ marginBottom: 8 }}>
                         <Text strong>Data Type:</Text> <Tag color="blue">{typeof extractionPreview}</Tag>

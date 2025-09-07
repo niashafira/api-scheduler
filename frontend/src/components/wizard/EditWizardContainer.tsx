@@ -8,19 +8,32 @@ import ExtractStep from './ExtractStep';
 import apiSourceApi from '../../services/apiSourceApi';
 import apiRequestApi from '../../services/apiRequestApi';
 import apiExtractApi from '../../services/apiExtractApi';
+import { ApiSource, ApiRequest, ApiExtract } from '../../types';
 
 const { Step } = Steps;
 const { Title } = Typography;
 
-const EditWizardContainer = () => {
+interface WizardData {
+  source: ApiSource | null;
+  request: ApiRequest | null;
+  extract: ApiExtract | null;
+  schema: any;
+  destination: any;
+  loadStrategy: any;
+  pagination: any;
+  schedule: any;
+  review: any;
+}
+
+const EditWizardContainer: React.FC = () => {
   const navigate = useNavigate();
-  const { id } = useParams();
-  const [currentStep, setCurrentStep] = useState(0);
-  const [loading, setLoading] = useState(true);
-  const [wizardData, setWizardData] = useState({
-    source: {},
-    request: {},
-    extract: {},
+  const { id } = useParams<{ id: string }>();
+  const [currentStep, setCurrentStep] = useState<number>(0);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [wizardData, setWizardData] = useState<WizardData>({
+    source: null,
+    request: null,
+    extract: null,
     schema: {},
     destination: {},
     loadStrategy: {},
@@ -30,7 +43,7 @@ const EditWizardContainer = () => {
   });
 
   // Determine which step to resume from based on existing data
-  const determineResumeStep = (sourceData, requestData, extractData) => {
+  const determineResumeStep = (sourceData: ApiSource | null, requestData: ApiRequest | null, extractData: ApiExtract | null): number => {
     if (!sourceData || !sourceData.id) return 0; // Start from source step
     if (!requestData || !requestData.id) return 1; // Resume from request step
     if (!extractData || !extractData.id) return 2; // Resume from extract step
@@ -40,45 +53,45 @@ const EditWizardContainer = () => {
   // Load existing data for the source
   useEffect(() => {
     loadExistingData();
-  }, [id]);
+  }, [id]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const loadExistingData = async () => {
+  const loadExistingData = async (): Promise<void> => {
     try {
       setLoading(true);
       
       // Load source data
-      const sourceResponse = await apiSourceApi.getApiSource(id);
+      const sourceResponse = await apiSourceApi.getApiSource(Number(id));
       if (!sourceResponse.success) {
         throw new Error('Source not found');
       }
       
       const sourceData = sourceResponse.data;
       console.log('EditWizardContainer - Loaded sourceData:', sourceData);
-      setWizardData(prev => ({ ...prev, source: sourceData }));
+      setWizardData(prev => ({ ...prev, source: sourceData || null }));
       
       // Load associated requests
-      const requestsResponse = await apiRequestApi.getApiRequestsBySource(id);
-      const requests = requestsResponse.success ? requestsResponse.data : [];
-      let extracts = [];
+      const requestsResponse = await apiRequestApi.getApiRequestsBySource(Number(id));
+      const requests = requestsResponse.success ? requestsResponse.data || [] : [];
+      let extracts: ApiExtract[] = [];
       
       if (requests.length > 0) {
         // Use the first request for now (could be enhanced to let user choose)
         const requestData = requests[0];
         console.log('EditWizardContainer - Loaded requestData:', requestData);
-        setWizardData(prev => ({ ...prev, request: requestData }));
+        setWizardData(prev => ({ ...prev, request: requestData || null }));
         
         // Load associated extracts
         const extractsResponse = await apiExtractApi.getApiExtractsByRequest(requestData.id);
-        extracts = extractsResponse.success ? extractsResponse.data : [];
+        extracts = extractsResponse.success ? extractsResponse.data || [] : [];
         
         if (extracts.length > 0) {
           const extractData = extracts[0];
-          setWizardData(prev => ({ ...prev, extract: extractData }));
+          setWizardData(prev => ({ ...prev, extract: extractData || null }));
         }
       }
       
       // Determine which step to resume from
-      const resumeStep = determineResumeStep(sourceData, requests[0], extracts[0]);
+      const resumeStep = determineResumeStep(sourceData || null, requests[0] || null, extracts[0] || null);
       setCurrentStep(resumeStep);
       
     } catch (error) {
@@ -168,7 +181,7 @@ const EditWizardContainer = () => {
     }
   ];
 
-  const handleBack = () => {
+  const handleBack = (): void => {
     if (currentStep === 0) {
       navigate('/sources');
     } else {
@@ -176,10 +189,6 @@ const EditWizardContainer = () => {
     }
   };
 
-  const handleFinish = () => {
-    // Handle completion of the wizard
-    navigate('/sources');
-  };
 
   if (loading) {
     return (

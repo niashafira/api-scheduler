@@ -105,7 +105,7 @@ const RequestStep = ({ onNext, onPrevious, sourceData, initialData = null, isEdi
       // If token-based auth, fetch the token config details
       let apiSourceData = response.data;
       
-      if (apiSourceData.auth_type === 'token' && apiSourceData.token_config_id) {
+      if (apiSourceData.authType === 'token' && apiSourceData.tokenConfigId) {
         try {
           // Fetch token config details
           const tokenConfigResponse = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:8000/api'}/token-configs/${apiSourceData.token_config_id}`);
@@ -183,12 +183,12 @@ const RequestStep = ({ onNext, onPrevious, sourceData, initialData = null, isEdi
   };
 
   const buildFullUrl = () => {
-    if (!apiSource || !apiSource.base_url) return '';
+    if (!apiSource || !apiSource.baseUrl) return '';
     
     // Remove trailing slash from base URL if present
-    const baseUrl = apiSource.base_url.endsWith('/') 
-      ? apiSource.base_url.slice(0, -1) 
-      : apiSource.base_url;
+    const baseUrl = apiSource.baseUrl.endsWith('/') 
+      ? apiSource.baseUrl.slice(0, -1) 
+      : apiSource.baseUrl;
     
     // Handle empty or slash-only path
     if (!endpointPath || endpointPath === '/') {
@@ -265,7 +265,7 @@ const RequestStep = ({ onNext, onPrevious, sourceData, initialData = null, isEdi
       }
       
       // Handle token-based authentication
-      if (apiSource && apiSource.auth_type === 'token' && apiSource.token_config) {
+      if (apiSource && apiSource.authType === 'token' && apiSource.tokenConfig) {
         setTestStep('Acquiring token...');
         
         try {
@@ -321,7 +321,7 @@ const RequestStep = ({ onNext, onPrevious, sourceData, initialData = null, isEdi
       };
       
       // If token-based auth, include token info
-      if (apiSource && apiSource.auth_type === 'token' && options.headers['Authorization']) {
+      if (apiSource && apiSource.authType === 'token' && options.headers['Authorization']) {
         result.tokenUsed = true;
         // Extract token from Authorization header (Bearer token)
         const token = options.headers['Authorization'].replace('Bearer ', '');
@@ -411,7 +411,7 @@ const RequestStep = ({ onNext, onPrevious, sourceData, initialData = null, isEdi
               <Space direction="vertical">
                 <div><Text strong>Name:</Text> {apiSource.name}</div>
                 <div><Text strong>Base URL:</Text> <Text code>{apiSource.base_url}</Text></div>
-                <div><Text strong>Auth Type:</Text> <Tag color="blue">{apiSource.auth_type || 'None'}</Tag></div>
+                <div><Text strong>Auth Type:</Text> <Tag color="blue">{apiSource.authType || 'None'}</Tag></div>
               </Space>
             }
             type="info"
@@ -725,7 +725,7 @@ const RequestStep = ({ onNext, onPrevious, sourceData, initialData = null, isEdi
               {testingRequest ? (testStep || 'Testing...') : 'Test Request'}
             </Button>
             
-            {testingRequest && apiSource && apiSource.auth_type === 'token' && (
+            {testingRequest && apiSource && apiSource.authType === 'token' && (
               <Card size="small" style={{ marginTop: 8 }}>
                 <Steps size="small" current={testStep === 'Acquiring token...' ? 0 : testStep === 'Testing API with token...' ? 1 : 0}>
                   <Step title="Acquire Token" description="Getting authentication token" />

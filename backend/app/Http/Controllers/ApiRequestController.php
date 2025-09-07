@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Services\ApiRequestService;
+use App\Utils\ResponseTransformer;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Validation\ValidationException;
@@ -23,10 +24,11 @@ class ApiRequestController extends Controller
     {
         try {
             $apiRequests = $this->apiRequestService->getAllApiRequests();
+            $transformedData = ResponseTransformer::transformCollection($apiRequests);
 
             return response()->json([
                 'success' => true,
-                'data' => $apiRequests,
+                'data' => $transformedData,
                 'message' => 'API requests retrieved successfully'
             ]);
         } catch (\Exception $e) {
@@ -45,10 +47,11 @@ class ApiRequestController extends Controller
     {
         try {
             $apiRequest = $this->apiRequestService->createApiRequest($request->all());
+            $transformedData = ResponseTransformer::transformModel($apiRequest);
 
             return response()->json([
                 'success' => true,
-                'data' => $apiRequest,
+                'data' => $transformedData,
                 'message' => 'API request created successfully'
             ], 201);
         } catch (ValidationException $e) {
@@ -83,9 +86,11 @@ class ApiRequestController extends Controller
                 ], 404);
             }
 
+            $transformedData = ResponseTransformer::transformModel($apiRequest);
+
             return response()->json([
                 'success' => true,
-                'data' => $apiRequest,
+                'data' => $transformedData,
                 'message' => 'API request retrieved successfully'
             ]);
         } catch (\Exception $e) {
@@ -114,9 +119,11 @@ class ApiRequestController extends Controller
                 ], 404);
             }
 
+            $transformedData = ResponseTransformer::transformModel($apiRequest);
+
             return response()->json([
                 'success' => true,
-                'data' => $apiRequest,
+                'data' => $transformedData,
                 'message' => 'API request updated successfully'
             ]);
         } catch (ValidationException $e) {
@@ -173,10 +180,11 @@ class ApiRequestController extends Controller
             // Convert string ID to integer
             $sourceId = (int) $sourceId;
             $apiRequests = $this->apiRequestService->getApiRequestsBySource($sourceId);
+            $transformedData = ResponseTransformer::transformCollection($apiRequests);
 
             return response()->json([
                 'success' => true,
-                'data' => $apiRequests,
+                'data' => $transformedData,
                 'message' => 'API requests retrieved successfully'
             ]);
         } catch (\Exception $e) {
@@ -195,10 +203,11 @@ class ApiRequestController extends Controller
     {
         try {
             $apiRequests = $this->apiRequestService->getActiveApiRequests();
+            $transformedData = ResponseTransformer::transformCollection($apiRequests);
 
             return response()->json([
                 'success' => true,
-                'data' => $apiRequests,
+                'data' => $transformedData,
                 'message' => 'Active API requests retrieved successfully'
             ]);
         } catch (\Exception $e) {

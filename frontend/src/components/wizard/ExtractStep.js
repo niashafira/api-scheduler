@@ -60,7 +60,7 @@ const ExtractStep = ({ onNext, onPrevious, sourceData, requestData, initialData 
   useEffect(() => {
     console.log('ExtractStep useEffect - requestData:', requestData);
     console.log('ExtractStep useEffect - sourceData:', sourceData);
-    let sourceDataBaseUrl = sourceData.base_url || sourceData.baseUrl;
+    let sourceDataBaseUrl = sourceData.baseUrl;
     
     if (requestData && requestData.id && sourceData && sourceDataBaseUrl) {
       console.log('ExtractStep - Calling fetchTestResponse');
@@ -128,7 +128,7 @@ const ExtractStep = ({ onNext, onPrevious, sourceData, requestData, initialData 
       let requestOptions = buildRequestOptions();
       
       // Handle token-based authentication
-      if (sourceData && sourceData.auth_type === 'token' && sourceData.token_config_id) {
+      if (sourceData && sourceData.authType === 'token' && sourceData.tokenConfigId) {
         try {
           // Fetch token configuration details
           const tokenConfigResponse = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:8000/api'}/token-configs/${sourceData.token_config_id}`);
@@ -202,9 +202,9 @@ const ExtractStep = ({ onNext, onPrevious, sourceData, requestData, initialData 
         status: 200,
         data: {
           data: [
-            { id: 1, name: "Item 1", status: "active", created_at: "2023-09-06T10:00:00Z" },
-            { id: 2, name: "Item 2", status: "inactive", created_at: "2023-09-05T09:30:00Z" },
-            { id: 3, name: "Item 3", status: "active", created_at: "2023-09-04T14:15:00Z" }
+            { id: 1, name: "Item 1", status: "active", createdAt: "2023-09-06T10:00:00Z" },
+            { id: 2, name: "Item 2", status: "inactive", createdAt: "2023-09-05T09:30:00Z" },
+            { id: 3, name: "Item 3", status: "active", createdAt: "2023-09-04T14:15:00Z" }
           ],
           pagination: {
             total: 3,
@@ -264,7 +264,7 @@ const ExtractStep = ({ onNext, onPrevious, sourceData, requestData, initialData 
     }
     
     // Get base URL from source
-    let baseUrl = sourceData.base_url || sourceData.baseUrl;
+    let baseUrl = sourceData.baseUrl;
     console.log('buildRequestUrl - baseUrl:', baseUrl);
     
     // Check if baseUrl is valid (not localhost:3000 or empty)
@@ -418,7 +418,7 @@ const ExtractStep = ({ onNext, onPrevious, sourceData, requestData, initialData 
       if (a.sampleFields.length === 0 && b.sampleFields.length > 0) return 1;
       
       // Common data field names that suggest this is the main data array
-      const dataFieldNames = ['id', 'name', 'title', 'description', 'created_at', 'updated_at'];
+      const dataFieldNames = ['id', 'name', 'title', 'description', 'createdAt', 'updatedAt'];
       const aScore = a.sampleFields.filter(f => dataFieldNames.includes(f)).length;
       const bScore = b.sampleFields.filter(f => dataFieldNames.includes(f)).length;
       
@@ -698,7 +698,7 @@ const ExtractStep = ({ onNext, onPrevious, sourceData, requestData, initialData 
       key: 'name',
       render: (text, record, index) => (
         <Input
-          placeholder="e.g., id, name, created_at"
+          placeholder="e.g., id, name, createdAt"
           value={text}
           onChange={(e) => updateExtractionPath(index, 'name', e.target.value)}
         />

@@ -147,22 +147,22 @@ const TokenConfigsTable = () => {
     },
     {
       title: 'Last Used',
-      dataIndex: 'last_used_at',
-      key: 'last_used_at',
+      dataIndex: 'lastUsedAt',
+      key: 'lastUsedAt',
       render: (date) => date ? new Date(date).toLocaleString() : 'Never',
       sorter: (a, b) => {
-        if (!a.last_used_at && !b.last_used_at) return 0;
-        if (!a.last_used_at) return 1;
-        if (!b.last_used_at) return -1;
-        return new Date(a.last_used_at) - new Date(b.last_used_at);
+        if (!a.lastUsedAt && !b.lastUsedAt) return 0;
+        if (!a.lastUsedAt) return 1;
+        if (!b.lastUsedAt) return -1;
+        return new Date(a.lastUsedAt) - new Date(b.lastUsedAt);
       },
     },
     {
       title: 'Created',
-      dataIndex: 'created_at',
-      key: 'created_at',
+      dataIndex: 'createdAt',
+      key: 'createdAt',
       render: (date) => new Date(date).toLocaleDateString(),
-      sorter: (a, b) => new Date(a.created_at) - new Date(b.created_at),
+      sorter: (a, b) => new Date(a.createdAt) - new Date(b.createdAt),
     },
     {
       title: 'Actions',

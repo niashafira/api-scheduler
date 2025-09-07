@@ -102,8 +102,8 @@ const SourcesTable = () => {
     },
     {
       title: 'Auth Type',
-      dataIndex: 'auth_type',
-      key: 'auth_type',
+      dataIndex: 'authType',
+      key: 'authType',
       render: (authType) => {
         let color;
         switch (authType) {
@@ -134,7 +134,7 @@ const SourcesTable = () => {
         { text: 'Basic Auth', value: 'basic' },
         { text: 'None', value: 'none' },
       ],
-      onFilter: (value, record) => record.auth_type === value,
+      onFilter: (value, record) => record.authType === value,
     },
     {
       title: 'Status',
@@ -153,26 +153,26 @@ const SourcesTable = () => {
     },
     {
       title: 'Last Used',
-      dataIndex: 'last_used_at',
-      key: 'last_used_at',
+      dataIndex: 'lastUsedAt',
+      key: 'lastUsedAt',
       render: (date) => date ? new Date(date).toLocaleString() : 'Never',
       sorter: (a, b) => {
-        if (!a.last_used_at && !b.last_used_at) return 0;
-        if (!a.last_used_at) return 1;
-        if (!b.last_used_at) return -1;
-        return new Date(a.last_used_at) - new Date(b.last_used_at);
+        if (!a.lastUsedAt && !b.lastUsedAt) return 0;
+        if (!a.lastUsedAt) return 1;
+        if (!b.lastUsedAt) return -1;
+        return new Date(a.lastUsedAt) - new Date(b.lastUsedAt);
       },
     },
     {
       title: 'Created',
-      dataIndex: 'created_at',
-      key: 'created_at',
+      dataIndex: 'createdAt',
+      key: 'createdAt',
       render: (date) => date ? new Date(date).toLocaleDateString() : '-',
       sorter: (a, b) => {
-        if (!a.created_at && !b.created_at) return 0;
-        if (!a.created_at) return 1;
-        if (!b.created_at) return -1;
-        return new Date(a.created_at) - new Date(b.created_at);
+        if (!a.createdAt && !b.createdAt) return 0;
+        if (!a.createdAt) return 1;
+        if (!b.createdAt) return -1;
+        return new Date(a.createdAt) - new Date(b.createdAt);
       },
     },
     {

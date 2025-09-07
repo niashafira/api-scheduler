@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Services\TokenConfigService;
+use App\Utils\ResponseTransformer;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Validation\ValidationException;
@@ -23,10 +24,11 @@ class TokenConfigController extends Controller
     {
         try {
             $tokenConfigs = $this->tokenConfigService->getAllTokenConfigs();
+            $transformedData = ResponseTransformer::transformCollection($tokenConfigs);
 
             return response()->json([
                 'success' => true,
-                'data' => $tokenConfigs,
+                'data' => $transformedData,
                 'message' => 'Token configurations retrieved successfully'
             ]);
         } catch (\Exception $e) {
@@ -45,10 +47,11 @@ class TokenConfigController extends Controller
     {
         try {
             $tokenConfig = $this->tokenConfigService->createTokenConfig($request->all());
+            $transformedData = ResponseTransformer::transformModel($tokenConfig);
 
             return response()->json([
                 'success' => true,
-                'data' => $tokenConfig,
+                'data' => $transformedData,
                 'message' => 'Token configuration created successfully'
             ], 201);
         } catch (ValidationException $e) {
@@ -83,9 +86,11 @@ class TokenConfigController extends Controller
                 ], 404);
             }
 
+            $transformedData = ResponseTransformer::transformModel($tokenConfig);
+
             return response()->json([
                 'success' => true,
-                'data' => $tokenConfig,
+                'data' => $transformedData,
                 'message' => 'Token configuration retrieved successfully'
             ]);
         } catch (\Exception $e) {
@@ -114,9 +119,11 @@ class TokenConfigController extends Controller
                 ], 404);
             }
 
+            $transformedData = ResponseTransformer::transformModel($tokenConfig);
+
             return response()->json([
                 'success' => true,
-                'data' => $tokenConfig,
+                'data' => $transformedData,
                 'message' => 'Token configuration updated successfully'
             ]);
         } catch (ValidationException $e) {
@@ -171,10 +178,11 @@ class TokenConfigController extends Controller
     {
         try {
             $tokenConfigs = $this->tokenConfigService->getActiveTokenConfigs();
+            $transformedData = ResponseTransformer::transformCollection($tokenConfigs);
 
             return response()->json([
                 'success' => true,
-                'data' => $tokenConfigs,
+                'data' => $transformedData,
                 'message' => 'Active token configurations retrieved successfully'
             ]);
         } catch (\Exception $e) {

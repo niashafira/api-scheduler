@@ -5,6 +5,7 @@ namespace App\Http\Controllers\API;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\CreateTableRequest;
 use App\Services\DynamicTableService;
+use App\Utils\ResponseTransformer;
 use Illuminate\Http\JsonResponse;
 
 class DynamicTableController extends Controller
@@ -36,12 +37,14 @@ class DynamicTableController extends Controller
             ], 400);
         }
 
+        $transformedData = ResponseTransformer::toCamelCase([
+            'table_name' => $result['table_name']
+        ]);
+
         return response()->json([
             'success' => true,
             'message' => $result['message'],
-            'data' => [
-                'table_name' => $result['table_name']
-            ]
+            'data' => $transformedData
         ], 201);
     }
 }

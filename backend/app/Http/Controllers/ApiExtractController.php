@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Services\ApiExtractService;
+use App\Utils\ResponseTransformer;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Validation\ValidationException;
@@ -23,10 +24,11 @@ class ApiExtractController extends Controller
     {
         try {
             $apiExtracts = $this->apiExtractService->getAllApiExtracts();
+            $transformedData = ResponseTransformer::transformCollection($apiExtracts);
 
             return response()->json([
                 'success' => true,
-                'data' => $apiExtracts,
+                'data' => $transformedData,
                 'message' => 'API extracts retrieved successfully'
             ]);
         } catch (\Exception $e) {
@@ -45,10 +47,11 @@ class ApiExtractController extends Controller
     {
         try {
             $apiExtract = $this->apiExtractService->createApiExtract($request->all());
+            $transformedData = ResponseTransformer::transformModel($apiExtract);
 
             return response()->json([
                 'success' => true,
-                'data' => $apiExtract,
+                'data' => $transformedData,
                 'message' => 'API extract created successfully'
             ], 201);
         } catch (ValidationException $e) {
@@ -83,9 +86,11 @@ class ApiExtractController extends Controller
                 ], 404);
             }
 
+            $transformedData = ResponseTransformer::transformModel($apiExtract);
+
             return response()->json([
                 'success' => true,
-                'data' => $apiExtract,
+                'data' => $transformedData,
                 'message' => 'API extract retrieved successfully'
             ]);
         } catch (\Exception $e) {
@@ -114,9 +119,11 @@ class ApiExtractController extends Controller
                 ], 404);
             }
 
+            $transformedData = ResponseTransformer::transformModel($apiExtract);
+
             return response()->json([
                 'success' => true,
-                'data' => $apiExtract,
+                'data' => $transformedData,
                 'message' => 'API extract updated successfully'
             ]);
         } catch (ValidationException $e) {
@@ -173,10 +180,11 @@ class ApiExtractController extends Controller
             // Convert string ID to integer
             $requestId = (int) $requestId;
             $apiExtracts = $this->apiExtractService->getApiExtractsByRequest($requestId);
+            $transformedData = ResponseTransformer::transformCollection($apiExtracts);
 
             return response()->json([
                 'success' => true,
-                'data' => $apiExtracts,
+                'data' => $transformedData,
                 'message' => 'API extracts retrieved successfully'
             ]);
         } catch (\Exception $e) {
@@ -195,10 +203,11 @@ class ApiExtractController extends Controller
     {
         try {
             $apiExtracts = $this->apiExtractService->getActiveApiExtracts();
+            $transformedData = ResponseTransformer::transformCollection($apiExtracts);
 
             return response()->json([
                 'success' => true,
-                'data' => $apiExtracts,
+                'data' => $transformedData,
                 'message' => 'Active API extracts retrieved successfully'
             ]);
         } catch (\Exception $e) {
@@ -249,10 +258,11 @@ class ApiExtractController extends Controller
             // Convert string ID to integer
             $id = (int) $id;
             $result = $this->apiExtractService->testExtraction($id);
+            $transformedData = ResponseTransformer::toCamelCase($result['data']);
 
             return response()->json([
                 'success' => true,
-                'data' => $result['data'],
+                'data' => $transformedData,
                 'response' => $result['response'],
                 'count' => $result['count'],
                 'message' => 'Extraction test completed successfully'

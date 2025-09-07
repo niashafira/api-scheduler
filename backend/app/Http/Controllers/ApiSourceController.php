@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Services\ApiSourceService;
+use App\Utils\ResponseTransformer;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Validation\ValidationException;
@@ -23,10 +24,11 @@ class ApiSourceController extends Controller
     {
         try {
             $apiSources = $this->apiSourceService->getAllApiSources();
+            $transformedData = ResponseTransformer::transformCollection($apiSources);
 
             return response()->json([
                 'success' => true,
-                'data' => $apiSources,
+                'data' => $transformedData,
                 'message' => 'API sources retrieved successfully'
             ]);
         } catch (\Exception $e) {
@@ -45,10 +47,11 @@ class ApiSourceController extends Controller
     {
         try {
             $apiSource = $this->apiSourceService->createApiSource($request->all());
+            $transformedData = ResponseTransformer::transformModel($apiSource);
 
             return response()->json([
                 'success' => true,
-                'data' => $apiSource,
+                'data' => $transformedData,
                 'message' => 'API source created successfully'
             ], 201);
         } catch (ValidationException $e) {
@@ -83,9 +86,11 @@ class ApiSourceController extends Controller
                 ], 404);
             }
 
+            $transformedData = ResponseTransformer::transformModel($apiSource);
+
             return response()->json([
                 'success' => true,
-                'data' => $apiSource,
+                'data' => $transformedData,
                 'message' => 'API source retrieved successfully'
             ]);
         } catch (\Exception $e) {
@@ -114,9 +119,11 @@ class ApiSourceController extends Controller
                 ], 404);
             }
 
+            $transformedData = ResponseTransformer::transformModel($apiSource);
+
             return response()->json([
                 'success' => true,
-                'data' => $apiSource,
+                'data' => $transformedData,
                 'message' => 'API source updated successfully'
             ]);
         } catch (ValidationException $e) {
@@ -171,10 +178,11 @@ class ApiSourceController extends Controller
     {
         try {
             $apiSources = $this->apiSourceService->getActiveApiSources();
+            $transformedData = ResponseTransformer::transformCollection($apiSources);
 
             return response()->json([
                 'success' => true,
-                'data' => $apiSources,
+                'data' => $transformedData,
                 'message' => 'Active API sources retrieved successfully'
             ]);
         } catch (\Exception $e) {

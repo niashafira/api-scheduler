@@ -70,12 +70,12 @@ const SourceStep = ({ onNext, onPrevious, initialData = null, isEditMode = false
     // Set form values
     form.setFieldsValue({
       name: initialData.name || '',
-      baseUrl: initialData.base_url || '',
-      authType: initialData.auth_type || 'none',
+      baseUrl: initialData.baseUrl || '',
+      authType: initialData.authType || 'none',
     });
 
     // Set auth type and related fields
-    setAuthType(initialData.auth_type || 'none');
+    setAuthType(initialData.authType || 'none');
 
     // Set headers
     if (initialData.headers && Array.isArray(initialData.headers)) {
@@ -83,7 +83,7 @@ const SourceStep = ({ onNext, onPrevious, initialData = null, isEditMode = false
     }
 
     // Handle token configuration if auth type is token
-    if (initialData.auth_type === 'token' && initialData.token_config_id) {
+    if (initialData.authType === 'token' && initialData.tokenConfigId) {
       setSelectedTokenConfigId(initialData.token_config_id);
       // Load token config details
       handleTokenConfigSelect(initialData.token_config_id);

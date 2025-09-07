@@ -146,6 +146,34 @@ export interface TokenConfig {
   updatedAt: string;
 }
 
+// Token Test Config Interface
+export interface TokenTestConfig {
+  endpoint: string;
+  method?: string;
+  headers?: Header[];
+  body?: string;
+  tokenPath: string;
+  expiresInPath?: string;
+  refreshTokenPath?: string;
+}
+
+// API Response Types
+export interface TokenTestResponse {
+  success: boolean;
+  token: string;
+  expiresIn: number | null;
+  refreshToken: string | null;
+  fullResponse: any;
+}
+
+export interface ApiTestResponse {
+  status: number;
+  statusText: string;
+  headers: Record<string, string>;
+  data: any;
+  ok: boolean;
+}
+
 // Dynamic Table Types
 export interface DynamicTable {
   tableName: string;

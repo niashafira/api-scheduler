@@ -1,12 +1,12 @@
-import { ApiResponse, TokenConfig, Header } from '../types';
+import { ApiResponse, TokenConfig, TokenTestConfig, TokenTestResponse, ApiTestResponse, Header } from '../types';
 
 // Request options interface
 interface RequestOptions extends RequestInit {
   headers?: Record<string, string>;
 }
 
-// Response interface
-interface TestResponse {
+// Generic API response interface
+interface GenericApiResponse {
   status: number;
   statusText: string;
   headers: Record<string, string>;
@@ -59,7 +59,7 @@ export const apiService = {
     }
   },
 
-  async testTokenAcquisition(tokenConfig: any): Promise<any> {
+  async testTokenAcquisition(tokenConfig: TokenTestConfig): Promise<TokenTestResponse> {
     const { endpoint, method, headers, body, tokenPath, expiresInPath, refreshTokenPath } = tokenConfig;
     
     if (!endpoint) {
@@ -153,7 +153,7 @@ export const apiService = {
     return await this.makeRequest(baseUrl, options);
   },
 
-  async testCustomRequest(url: string, options: RequestOptions = {}): Promise<TestResponse> {
+  async testCustomRequest(url: string, options: RequestOptions = {}): Promise<ApiTestResponse> {
     try {
       const response = await fetch(url, options);
       

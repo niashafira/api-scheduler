@@ -59,38 +59,68 @@ export const apiService = {
     }
   },
 
-  async testTokenAcquisition(tokenConfig: TokenConfig): Promise<any> {
-    const { tokenUrl, grantType, clientId, clientSecret, username, password, scope, additionalParams } = tokenConfig;
+  async testTokenAcquisition(tokenConfig: any): Promise<any> {
+    const { endpoint, method, headers, body, tokenPath, expiresInPath, refreshTokenPath } = tokenConfig;
     
-    // Build request body based on grant type
-    let body: Record<string, string> = {
-      grant_type: grantType,
-    };
-
-    if (grantType === 'client_credentials') {
-      if (clientId) body.client_id = clientId;
-      if (clientSecret) body.client_secret = clientSecret;
-    } else if (grantType === 'password') {
-      if (username) body.username = username;
-      if (password) body.password = password;
-      if (clientId) body.client_id = clientId;
-      if (clientSecret) body.client_secret = clientSecret;
+    if (!endpoint) {
+      throw new Error('Token endpoint is required');
+    }
+    if (!tokenPath) {
+      throw new Error('Token field path is required');
     }
 
-    if (scope) body.scope = scope;
-    if (additionalParams) {
-      body = { ...body, ...additionalParams };
+    // Prepare headers for the request
+    const requestHeaders: Record<string, string> = {
+      'Content-Type': 'application/json',
+    };
+    
+    // Add custom headers
+    if (headers) {
+      headers.forEach((header: Header) => {
+        if (header.key && header.value) {
+          requestHeaders[header.key] = header.value;
+        }
+      });
+    }
+
+    // Parse body if it's a JSON string
+    let requestBody: any = undefined;
+    if (body) {
+      try {
+        requestBody = JSON.parse(body);
+      } catch (e) {
+        requestBody = body;
+      }
     }
 
     const options: RequestOptions = {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-      },
-      body: new URLSearchParams(body).toString(),
+      method: method || 'POST',
+      headers: requestHeaders,
+      body: requestBody ? JSON.stringify(requestBody) : undefined,
     };
 
-    return await this.makeRequest(tokenUrl, options);
+    const response = await fetch(endpoint, options);
+
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    const responseData = await response.json();
+    
+    // Extract token using the specified path
+    const tokenValue = jsonPath.getValue(responseData, tokenPath);
+    
+    if (!tokenValue) {
+      throw new Error(`No valid token found at path: ${tokenPath}`);
+    }
+
+    return {
+      success: true,
+      token: tokenValue,
+      expiresIn: expiresInPath ? jsonPath.getValue(responseData, expiresInPath) : null,
+      refreshToken: refreshTokenPath ? jsonPath.getValue(responseData, refreshTokenPath) : null,
+      fullResponse: responseData
+    };
   },
 
   async testRegularConnection(baseUrl: string, headers: Header[] = []): Promise<any> {

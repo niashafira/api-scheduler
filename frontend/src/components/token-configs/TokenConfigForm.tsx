@@ -94,6 +94,7 @@ const TokenConfigForm: React.FC<TokenConfigFormProps> = ({ initialData, onSubmit
 
       // Step 1: Test token acquisition
       setTestStep('Acquiring token...');
+      
       const tokenConfig = {
         endpoint: formValues.endpoint,
         method: formValues.method,
@@ -104,20 +105,14 @@ const TokenConfigForm: React.FC<TokenConfigFormProps> = ({ initialData, onSubmit
         refreshTokenPath: formValues.refreshTokenPath,
       };
 
-      const response = await apiService.testTokenAcquisition(tokenConfig as any);
+      const response = await apiService.testTokenAcquisition(tokenConfig);
       console.log('Token response:', response);
-      
-      const tokenData = jsonPath.extractTokenData(response, tokenConfig);
-      
-      if (!tokenData.isValid) {
-        throw new Error(`No valid token found at path: ${formValues.tokenPath}`);
-      }
       
       setTestResult({ 
         success: true, 
         message: 'Token acquisition successful!',
-        details: `Token: ${tokenData.token ? tokenData.token.substring(0, 20) + '...' : 'N/A'}`,
-        tokenData
+        details: `Token: ${response.token ? response.token.substring(0, 20) + '...' : 'N/A'}`,
+        tokenData: response
       });
       message.success('Token acquisition test successful!');
     } catch (error: any) {

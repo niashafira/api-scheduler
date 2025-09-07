@@ -143,11 +143,10 @@ export interface TokenConfig {
   headers?: Header[];
   method?: string;
   endpoint?: string;
-  token_path?: string;
-  expires_in_path?: string;
-  refresh_token_path?: string;
-  expires_in?: number;
-  refresh_enabled?: boolean;
+  tokenPath?: string;
+  expiresInPath?: string;
+  expiresIn?: number;
+  refreshEnabled?: boolean;
   status: 'active' | 'inactive';
   lastUsedAt?: string;
   createdAt: string;

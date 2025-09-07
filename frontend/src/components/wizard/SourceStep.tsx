@@ -60,18 +60,19 @@ const SourceStep: React.FC<SourceStepProps> = ({ onNext, onPrevious, initialData
   const [existingTokenConfigs, setExistingTokenConfigs] = useState<TokenConfig[]>([]);
   const [loadingTokenConfigs, setLoadingTokenConfigs] = useState<boolean>(false);
   const [selectedTokenConfigId, setSelectedTokenConfigId] = useState<number | null>(null);
-  const [tokenConfig, setTokenConfig] = useState<TokenConfigState>({
-    enabled: false,
-    endpoint: '',
-    method: 'POST',
-    headers: [{ key: '', value: '' }],
-    body: '',
-    tokenPath: 'access_token',
-    expiresInPath: 'expires_in',
-    refreshTokenPath: 'refresh_token',
-    expiresIn: 3600,
-    refreshEnabled: false
-  });
+  const [enableTokenConfig, setEnableTokenConfig] = useState<boolean>(false);
+  // const [tokenConfig, setTokenConfig] = useState<TokenConfigState>({
+  //   enabled: false,
+  //   endpoint: '',
+  //   method: 'POST',
+  //   headers: [{ key: '', value: '' }],
+  //   body: '',
+  //   tokenPath: 'access_token',
+  //   expiresInPath: 'expires_in',
+  //   refreshTokenPath: 'refresh_token',
+  //   expiresIn: 3600,
+  //   refreshEnabled: false
+  // });
 
   // Fetch existing token configurations when component mounts
   useEffect(() => {
@@ -127,9 +128,9 @@ const SourceStep: React.FC<SourceStepProps> = ({ onNext, onPrevious, initialData
   const handleAuthTypeChange = (value: string): void => {
     setAuthType(value);
     if (value === 'token') {
-      setTokenConfig({...tokenConfig, enabled: true});
+      setEnableTokenConfig(true);
     } else {
-      setTokenConfig({...tokenConfig, enabled: false});
+      setEnableTokenConfig(false);
       setSelectedTokenConfigId(null);
     }
   };
@@ -137,18 +138,7 @@ const SourceStep: React.FC<SourceStepProps> = ({ onNext, onPrevious, initialData
   const handleTokenConfigSelect = async (configId: number): Promise<void> => {
     if (!configId) {
       setSelectedTokenConfigId(null);
-      setTokenConfig({
-        enabled: false,
-        endpoint: '',
-        method: 'POST',
-        headers: [{ key: '', value: '' }],
-        body: '',
-        tokenPath: 'access_token',
-        expiresInPath: 'expires_in',
-        refreshTokenPath: 'refresh_token',
-        expiresIn: 3600,
-        refreshEnabled: false
-      });
+      setEnableTokenConfig(false);
       return;
     }
 
@@ -164,18 +154,7 @@ const SourceStep: React.FC<SourceStepProps> = ({ onNext, onPrevious, initialData
       const configData = config.data || config;
       
       setSelectedTokenConfigId(numericId);
-      setTokenConfig({
-        enabled: true,
-        endpoint: (configData as any).endpoint || '',
-        method: (configData as any).method || 'POST',
-        headers: (configData as any).headers || [{ key: '', value: '' }],
-        body: (configData as any).body || '',
-        tokenPath: (configData as any).token_path || 'access_token',
-        expiresInPath: (configData as any).expires_in_path || 'expires_in',
-        refreshTokenPath: (configData as any).refresh_token_path || 'refresh_token',
-        expiresIn: (configData as any).expires_in || 3600,
-        refreshEnabled: (configData as any).refresh_enabled || false
-      });
+      setEnableTokenConfig(true);
     } catch (error) {
       console.error('Failed to load token configuration:', error);
       message.error('Failed to load selected token configuration');
@@ -210,10 +189,7 @@ const SourceStep: React.FC<SourceStepProps> = ({ onNext, onPrevious, initialData
       const formData = {
         ...values,
         headers: headers.filter(h => h.key && h.value),
-        tokenConfig: authType === 'token' ? {
-          ...tokenConfig,
-          selectedConfigId: selectedTokenConfigId ? parseInt(String(selectedTokenConfigId), 10) : null
-        } : null,
+        tokenConfigId: authType === 'token' ? selectedTokenConfigId : null
       };
       
       console.log('Processed form data:', formData);

@@ -40,15 +40,6 @@ class ApiSourceService
             });
         }
 
-        // Handle token configuration
-        if (isset($data['token_config']) && is_array($data['token_config'])) {
-            $tokenConfig = $data['token_config'];
-            if (isset($tokenConfig['selectedConfigId'])) {
-                $data['token_config_id'] = $tokenConfig['selectedConfigId'];
-            }
-            unset($data['token_config']);
-        }
-
         return $this->repository->create($data);
     }
 
@@ -160,7 +151,7 @@ class ApiSourceService
             'apiKeyName' => 'api_key_name',
             'apiKeyValue' => 'api_key_value',
             'apiKeyLocation' => 'api_key_location',
-            'tokenConfig' => 'token_config',
+            'tokenConfigId' => 'token_config_id',
         ];
 
         foreach ($fieldMapping as $camelCase => $snakeCase) {

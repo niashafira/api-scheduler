@@ -5,6 +5,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import SourceStep from './SourceStep';
 import RequestStep from './RequestStep';
 import ExtractStep from './ExtractStep';
+import DestinationStep from './DestinationStep';
 import apiSourceApi from '../../services/apiSourceApi';
 import apiRequestApi from '../../services/apiRequestApi';
 import apiExtractApi from '../../services/apiExtractApi';
@@ -145,14 +146,20 @@ const EditWizardContainer: React.FC = () => {
       />
     },
     {
-      title: 'Schema',
-      description: 'Schema & Mapping',
-      content: <div>Schema & Mapping Step (Coming Soon)</div>
-    },
-    {
       title: 'Destination',
       description: 'Choose Destination',
-      content: <div>Destination Step (Coming Soon)</div>
+      content: <DestinationStep 
+        onNext={(data) => {
+          setWizardData({...wizardData, destination: data});
+          setCurrentStep(currentStep + 1);
+        }}
+        onPrevious={() => setCurrentStep(currentStep - 1)}
+        sourceData={wizardData.source}
+        requestData={wizardData.request}
+        extractData={wizardData.extract}
+        initialData={wizardData.destination}
+        isEditMode={true}
+      />
     },
     {
       title: 'Load Strategy',

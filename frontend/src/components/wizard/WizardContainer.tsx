@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import SourceStep from './SourceStep';
 import RequestStep from './RequestStep';
 import ExtractStep from './ExtractStep';
+import DestinationStep from './DestinationStep';
 import { ApiSource, ApiRequest, ApiExtract } from '../../types';
 
 const { Step } = Steps;
@@ -74,14 +75,18 @@ const WizardContainer: React.FC = () => {
       />
     },
     {
-      title: 'Schema',
-      description: 'Schema & Mapping',
-      content: <div>Schema & Mapping Step (Coming Soon)</div>
-    },
-    {
       title: 'Destination',
       description: 'Choose Destination',
-      content: <div>Destination Step (Coming Soon)</div>
+      content: <DestinationStep 
+        onNext={(data) => {
+          setWizardData({...wizardData, destination: data});
+          setCurrentStep(currentStep + 1);
+        }}
+        onPrevious={() => setCurrentStep(currentStep - 1)}
+        sourceData={wizardData.source}
+        requestData={wizardData.request}
+        extractData={wizardData.extract}
+      />
     },
     {
       title: 'Load Strategy',

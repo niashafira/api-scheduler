@@ -58,10 +58,22 @@ const ExtractStep = ({ onNext, onPrevious, sourceData, requestData, initialData 
 
   // Fetch test response data when component mounts
   useEffect(() => {
-    if (requestData && requestData.id) {
+    console.log('ExtractStep useEffect - requestData:', requestData);
+    console.log('ExtractStep useEffect - sourceData:', sourceData);
+    let sourceDataBaseUrl = sourceData.base_url || sourceData.baseUrl;
+    
+    if (requestData && requestData.id && sourceData && sourceDataBaseUrl) {
+      console.log('ExtractStep - Calling fetchTestResponse');
       fetchTestResponse();
+    } else {
+      console.log('ExtractStep - Not calling fetchTestResponse, missing data:', {
+        requestData: !!requestData,
+        requestDataId: requestData?.id,
+        sourceData: !!sourceData,
+        sourceDataBaseUrl: sourceDataBaseUrl
+      });
     }
-  }, [requestData]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [requestData, sourceData]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Populate form with initial data when in edit mode
   useEffect(() => {
@@ -101,9 +113,16 @@ const ExtractStep = ({ onNext, onPrevious, sourceData, requestData, initialData 
     try {
       setLoading(true);
       
+      console.log('fetchTestResponse - requestData:', requestData);
+      console.log('fetchTestResponse - sourceData:', sourceData);
+      
       if (!requestData || !requestData.id) {
         throw new Error('No request data available');
       }
+      
+      // Build the URL first
+      const url = buildRequestUrl();
+      console.log('fetchTestResponse - built URL:', url);
       
       // Build request options with token authentication if needed
       let requestOptions = buildRequestOptions();
@@ -150,8 +169,9 @@ const ExtractStep = ({ onNext, onPrevious, sourceData, requestData, initialData 
       }
       
       // Make a real API call to test the request
+      console.log('fetchTestResponse - Making API call to:', url);
       const response = await apiService.testCustomRequest(
-        buildRequestUrl(), 
+        url, 
         requestOptions
       );
       
@@ -235,16 +255,32 @@ const ExtractStep = ({ onNext, onPrevious, sourceData, requestData, initialData 
   
   // Build the full request URL from the request data
   const buildRequestUrl = () => {
-    if (!requestData || !sourceData) return '';
+    console.log('buildRequestUrl - sourceData:', sourceData);
+    console.log('buildRequestUrl - requestData:', requestData);
+    
+    if (!requestData || !sourceData) {
+      console.log('buildRequestUrl - Missing data:', { requestData: !!requestData, sourceData: !!sourceData });
+      return '';
+    }
     
     // Get base URL from source
-    let baseUrl = sourceData.base_url || '';
+    let baseUrl = sourceData.base_url || sourceData.baseUrl;
+    console.log('buildRequestUrl - baseUrl:', baseUrl);
+    
+    // Check if baseUrl is valid (not localhost:3000 or empty)
+    if (!baseUrl || baseUrl.includes('localhost:3000') || baseUrl === '') {
+      console.error('buildRequestUrl - Invalid baseUrl:', baseUrl);
+      throw new Error('Invalid or missing base URL in source data');
+    }
+    
     if (baseUrl.endsWith('/')) {
       baseUrl = baseUrl.slice(0, -1);
     }
     
     // Get path from request
     let path = requestData.path || '';
+    console.log('buildRequestUrl - path:', path);
+    
     if (!path.startsWith('/')) {
       path = '/' + path;
     }
@@ -270,7 +306,10 @@ const ExtractStep = ({ onNext, onPrevious, sourceData, requestData, initialData 
       }
     }
     
-    return baseUrl + path + queryString;
+    const finalUrl = baseUrl + path + queryString;
+    console.log('buildRequestUrl - finalUrl:', finalUrl);
+    
+    return finalUrl;
   };
   
   // Build the request options from the request data

@@ -53,6 +53,7 @@ const EditWizardContainer = () => {
       }
       
       const sourceData = sourceResponse.data;
+      console.log('EditWizardContainer - Loaded sourceData:', sourceData);
       setWizardData(prev => ({ ...prev, source: sourceData }));
       
       // Load associated requests
@@ -63,6 +64,7 @@ const EditWizardContainer = () => {
       if (requests.length > 0) {
         // Use the first request for now (could be enhanced to let user choose)
         const requestData = requests[0];
+        console.log('EditWizardContainer - Loaded requestData:', requestData);
         setWizardData(prev => ({ ...prev, request: requestData }));
         
         // Load associated extracts

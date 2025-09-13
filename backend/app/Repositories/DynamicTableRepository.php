@@ -88,7 +88,9 @@ class DynamicTableRepository implements DynamicTableRepositoryInterface
                         case 'date':
                             $tableColumn = $table->date($name);
                             break;
-                        // dateTime type removed as it's not supported
+                        case 'timestamp':
+                            $tableColumn = $table->timestamp($name);
+                            break;
                         case 'decimal':
                             $precision = $column['precision'] ?? 8;
                             $scale = $column['scale'] ?? 2;

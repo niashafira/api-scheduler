@@ -5,6 +5,7 @@ use App\Http\Controllers\TokenConfigController;
 use App\Http\Controllers\ApiSourceController;
 use App\Http\Controllers\ApiRequestController;
 use App\Http\Controllers\ApiExtractController;
+use App\Http\Controllers\DestinationController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -57,3 +58,6 @@ Route::get('/api-extracts/request/{requestId}', [ApiExtractController::class, 'b
 Route::post('/api-extracts/{id}/mark-executed', [ApiExtractController::class, 'markAsExecuted']);
 Route::post('/api-extracts/{id}/test', [ApiExtractController::class, 'testExtraction']);
 Route::apiResource('api-extracts', ApiExtractController::class);
+
+// Destination Routes
+Route::apiResource('destinations', DestinationController::class);

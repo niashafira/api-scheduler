@@ -101,7 +101,7 @@ class DynamicTableService
         $validColumns = [];
         $supportedTypes = [
             'string', 'integer', 'bigInteger', 'boolean',
-            'date', 'decimal', 'text', 'json'
+            'date', 'timestamp', 'decimal', 'text', 'json'
         ];
 
         foreach ($columns as $column) {

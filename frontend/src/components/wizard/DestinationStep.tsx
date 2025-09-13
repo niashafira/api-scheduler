@@ -7,28 +7,22 @@ import {
   Space,
   Typography,
   Divider,
-  Radio,
   Alert,
   Table,
-  Tag,
   message,
-  Collapse,
   Tooltip,
-  Switch,
-  InputNumber
+  Switch
 } from 'antd';
 import {
   DatabaseOutlined,
   PlusOutlined,
   DeleteOutlined,
-  InfoCircleOutlined,
-  CheckCircleOutlined,
-  ExclamationCircleOutlined
+  InfoCircleOutlined
 } from '@ant-design/icons';
 import { ApiSource, ApiRequest, ApiExtract } from '../../types';
+import destinationApi from '../../services/destinationApi';
 
 const { Title, Text } = Typography;
-const { Panel } = Collapse;
 
 interface DestinationStepProps {
   onNext?: (data: any) => void;
@@ -50,15 +44,6 @@ interface TableColumn {
   description?: string;
 }
 
-interface MigrationPlan {
-  action: 'create' | 'alter' | 'drop' | 'no_change';
-  tableName: string;
-  changes: Array<{
-    type: 'add_column' | 'modify_column' | 'drop_column' | 'add_index' | 'drop_index';
-    columnName: string;
-    details?: any;
-  }>;
-}
 
 const DestinationStep: React.FC<DestinationStepProps> = ({ 
   onNext, 
@@ -70,11 +55,7 @@ const DestinationStep: React.FC<DestinationStepProps> = ({
   isEditMode = false 
 }) => {
   const [form] = Form.useForm();
-  const [destinationType, setDestinationType] = useState<'new' | 'existing'>('new');
   const [tableName, setTableName] = useState<string>('');
-  const [existingTables, setExistingTables] = useState<string[]>([]);
-  const [selectedExistingTable, setSelectedExistingTable] = useState<string>('');
-  const [migrationPlan, setMigrationPlan] = useState<MigrationPlan | null>(null);
   const [columns, setColumns] = useState<TableColumn[]>([]);
   const [includeRawPayload, setIncludeRawPayload] = useState<boolean>(true);
   const [includeIngestedAt, setIncludeIngestedAt] = useState<boolean>(true);
@@ -110,16 +91,12 @@ const DestinationStep: React.FC<DestinationStepProps> = ({
     if (!initialData) return;
 
     form.setFieldsValue({
-      destinationType: initialData.destinationType || 'new',
       tableName: initialData.tableName || '',
-      selectedExistingTable: initialData.selectedExistingTable || '',
       includeRawPayload: initialData.includeRawPayload !== false,
       includeIngestedAt: initialData.includeIngestedAt !== false
     });
 
-    setDestinationType(initialData.destinationType || 'new');
     setTableName(initialData.tableName || '');
-    setSelectedExistingTable(initialData.selectedExistingTable || '');
     setIncludeRawPayload(initialData.includeRawPayload !== false);
     setIncludeIngestedAt(initialData.includeIngestedAt !== false);
     setColumns(initialData.columns || []);
@@ -202,52 +179,8 @@ const DestinationStep: React.FC<DestinationStepProps> = ({
     return mapping[dataType] || 'VARCHAR(255)';
   };
 
-  const handleDestinationTypeChange = (e: any): void => {
-    const value = e.target.value;
-    setDestinationType(value);
-    
-    if (value === 'new') {
-      setSelectedExistingTable('');
-      setMigrationPlan(null);
-    } else {
-      setTableName('');
-      // In a real implementation, this would fetch existing tables from the database
-      setExistingTables(['users', 'products', 'orders', 'api_data']);
-    }
-  };
-
   const handleTableNameChange = (e: any): void => {
     setTableName(e.target.value);
-  };
-
-  const handleExistingTableChange = (value: string): void => {
-    setSelectedExistingTable(value);
-    if (value) {
-      generateMigrationPlan(value);
-    } else {
-      setMigrationPlan(null);
-    }
-  };
-
-  const generateMigrationPlan = (tableName: string): void => {
-    // Mock migration plan - in real implementation, this would analyze the existing table schema
-    const mockPlan: MigrationPlan = {
-      action: 'alter',
-      tableName: tableName,
-      changes: [
-        {
-          type: 'add_column',
-          columnName: 'new_field_from_api',
-          details: { type: 'VARCHAR(255)', nullable: true }
-        },
-        {
-          type: 'modify_column',
-          columnName: 'existing_field',
-          details: { type: 'VARCHAR(500)', nullable: false }
-        }
-      ]
-    };
-    setMigrationPlan(mockPlan);
   };
 
   const addColumn = (): void => {
@@ -291,21 +224,36 @@ const DestinationStep: React.FC<DestinationStepProps> = ({
       }
 
       const formData = {
-        destinationType: destinationType,
-        tableName: destinationType === 'new' ? tableName : selectedExistingTable,
+        destinationType: 'new' as const,
+        tableName: tableName,
         columns: validColumns,
         includeRawPayload: includeRawPayload,
         includeIngestedAt: includeIngestedAt,
-        migrationPlan: migrationPlan,
-        status: 'active'
+        status: 'active',
+        apiSourceId: sourceData?.id || null,
+        apiRequestId: requestData?.id || null,
+        apiExtractId: extractData?.id || null
       };
 
       console.log('Destination configuration to save:', formData);
-      message.success('Destination configuration saved successfully!');
 
-      // Move to next step
-      if (onNext) {
-        onNext(formData);
+      // Call the backend API to create the destination
+      const response = await destinationApi.createDestination(formData);
+      
+      if (response.success) {
+        message.success('Destination configuration saved successfully!');
+        
+        // Move to next step with the created destination data
+        if (onNext) {
+          onNext({
+            ...formData,
+            id: response.data.id,
+            createdAt: response.data.createdAt,
+            updatedAt: response.data.updatedAt
+          });
+        }
+      } else {
+        message.error(response.message || 'Failed to save destination configuration');
       }
     } catch (error) {
       console.error('Failed to save destination configuration:', error);
@@ -414,7 +362,6 @@ const DestinationStep: React.FC<DestinationStepProps> = ({
         layout="vertical"
         onFinish={handleSubmit}
         initialValues={{
-          destinationType: 'new',
           includeRawPayload: true,
           includeIngestedAt: true
         }}
@@ -428,62 +375,20 @@ const DestinationStep: React.FC<DestinationStepProps> = ({
         />
 
         <Form.Item
-          name="destinationType"
-          label="Destination Type"
-          rules={[{ required: true, message: 'Please select a destination type' }]}
+          name="tableName"
+          label="Table Name"
+          rules={[
+            { required: true, message: 'Please enter a table name' },
+            { pattern: /^[a-zA-Z_][a-zA-Z0-9_]*$/, message: 'Invalid table name format' }
+          ]}
         >
-          <Radio.Group onChange={handleDestinationTypeChange} value={destinationType}>
-            <Radio value="new">
-              <Space direction="vertical" size={0}>
-                <Text strong>Create New Table</Text>
-                <Text type="secondary">Create a new table with the extracted data structure</Text>
-              </Space>
-            </Radio>
-            <Radio value="existing">
-              <Space direction="vertical" size={0}>
-                <Text strong>Use Existing Table</Text>
-                <Text type="secondary">Add columns to an existing table (migration required)</Text>
-              </Space>
-            </Radio>
-          </Radio.Group>
+          <Input
+            placeholder="e.g., api_users, product_data"
+            value={tableName}
+            onChange={handleTableNameChange}
+            prefix={<DatabaseOutlined />}
+          />
         </Form.Item>
-
-        {destinationType === 'new' && (
-          <Form.Item
-            name="tableName"
-            label="Table Name"
-            rules={[
-              { required: true, message: 'Please enter a table name' },
-              { pattern: /^[a-zA-Z_][a-zA-Z0-9_]*$/, message: 'Invalid table name format' }
-            ]}
-          >
-            <Input
-              placeholder="e.g., api_users, product_data"
-              value={tableName}
-              onChange={handleTableNameChange}
-              prefix={<DatabaseOutlined />}
-            />
-          </Form.Item>
-        )}
-
-        {destinationType === 'existing' && (
-          <Form.Item
-            name="selectedExistingTable"
-            label="Existing Table"
-            rules={[{ required: true, message: 'Please select an existing table' }]}
-          >
-            <select
-              value={selectedExistingTable}
-              onChange={(e) => handleExistingTableChange(e.target.value)}
-              style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid #d9d9d9' }}
-            >
-              <option value="">Select a table...</option>
-              {existingTables.map(table => (
-                <option key={table} value={table}>{table}</option>
-              ))}
-            </select>
-          </Form.Item>
-        )}
 
         <Divider orientation="left">System Columns</Divider>
 
@@ -558,57 +463,6 @@ const DestinationStep: React.FC<DestinationStepProps> = ({
           )}
         </Space>
 
-        {migrationPlan && (
-          <Collapse style={{ marginBottom: 16 }}>
-            <Panel header="Migration Plan" key="migration">
-              <Alert
-                message="Table Migration Required"
-                description={`The following changes will be made to table "${migrationPlan.tableName}":`}
-                type="warning"
-                showIcon
-                style={{ marginBottom: 16 }}
-              />
-              <Table
-                dataSource={migrationPlan.changes}
-                columns={[
-                  {
-                    title: 'Action',
-                    dataIndex: 'type',
-                    key: 'type',
-                    render: (type: string) => {
-                      const actionMap: Record<string, { color: string; icon: any; text: string }> = {
-                        'add_column': { color: 'green', icon: <PlusOutlined />, text: 'Add Column' },
-                        'modify_column': { color: 'blue', icon: <InfoCircleOutlined />, text: 'Modify Column' },
-                        'drop_column': { color: 'red', icon: <DeleteOutlined />, text: 'Drop Column' },
-                        'add_index': { color: 'green', icon: <CheckCircleOutlined />, text: 'Add Index' },
-                        'drop_index': { color: 'red', icon: <ExclamationCircleOutlined />, text: 'Drop Index' }
-                      };
-                      const action = actionMap[type] || { color: 'default', icon: null, text: type };
-                      return (
-                        <Tag color={action.color} icon={action.icon}>
-                          {action.text}
-                        </Tag>
-                      );
-                    }
-                  },
-                  {
-                    title: 'Column',
-                    dataIndex: 'columnName',
-                    key: 'columnName'
-                  },
-                  {
-                    title: 'Details',
-                    dataIndex: 'details',
-                    key: 'details',
-                    render: (details: any) => details ? JSON.stringify(details) : '-'
-                  }
-                ]}
-                pagination={false}
-                size="small"
-              />
-            </Panel>
-          </Collapse>
-        )}
 
         <Divider />
 

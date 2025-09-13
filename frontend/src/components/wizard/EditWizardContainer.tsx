@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Steps, Button, Card, Space, Typography, Spin, Alert } from 'antd';
+import { Steps, Button, Card, Space, Typography, Spin, Alert, message } from 'antd';
 import { ArrowLeftOutlined, ApiOutlined } from '@ant-design/icons';
 import { useNavigate, useParams } from 'react-router-dom';
 import SourceStep from './SourceStep';
@@ -7,6 +7,7 @@ import RequestStep from './RequestStep';
 import ExtractStep from './ExtractStep';
 import DestinationStep from './DestinationStep';
 import ScheduleStep from './ScheduleStep';
+import ReviewStep from './ReviewStep';
 import apiSourceApi from '../../services/apiSourceApi';
 import apiRequestApi from '../../services/apiRequestApi';
 import apiExtractApi from '../../services/apiExtractApi';
@@ -200,7 +201,19 @@ const EditWizardContainer: React.FC = () => {
     {
       title: 'Review',
       description: 'Review & Test',
-      content: <div>Review & Test Step (Coming Soon)</div>
+      content: <ReviewStep 
+        onPrevious={() => setCurrentStep(currentStep - 1)}
+        onFinish={() => {
+          message.success('API Call Scheduler configuration updated successfully!');
+          navigate('/sources');
+        }}
+        sourceData={wizardData.source}
+        requestData={wizardData.request}
+        extractData={wizardData.extract}
+        destinationData={wizardData.destination}
+        scheduleData={wizardData.schedule}
+        isEditMode={true}
+      />
     }
   ];
 

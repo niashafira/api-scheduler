@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Steps, Button, Card, Space, Typography } from 'antd';
+import { Steps, Button, Card, Space, Typography, message } from 'antd';
 import { ArrowLeftOutlined, ApiOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import SourceStep from './SourceStep';
@@ -7,6 +7,7 @@ import RequestStep from './RequestStep';
 import ExtractStep from './ExtractStep';
 import DestinationStep from './DestinationStep';
 import ScheduleStep from './ScheduleStep';
+import ReviewStep from './ReviewStep';
 import { ApiSource, ApiRequest, ApiExtract } from '../../types';
 
 const { Step } = Steps;
@@ -101,7 +102,18 @@ const WizardContainer: React.FC = () => {
     {
       title: 'Review',
       description: 'Review & Test',
-      content: <div>Review & Test Step (Coming Soon)</div>
+      content: <ReviewStep 
+        onPrevious={() => setCurrentStep(currentStep - 1)}
+        onFinish={() => {
+          message.success('API Call Scheduler configuration created successfully!');
+          navigate('/sources');
+        }}
+        sourceData={wizardData.source}
+        requestData={wizardData.request}
+        extractData={wizardData.extract}
+        destinationData={wizardData.destination}
+        scheduleData={wizardData.schedule}
+      />
     }
   ];
 

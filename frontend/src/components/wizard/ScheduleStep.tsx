@@ -21,9 +21,9 @@ import {
   PlayCircleOutlined,
   PauseCircleOutlined,
   InfoCircleOutlined,
-  ReloadOutlined
 } from '@ant-design/icons';
 import { ApiSource, ApiRequest, ApiExtract } from '../../types';
+import scheduleApi from '../../services/scheduleApi';
 // Using native Date handling instead of dayjs
 
 const { Title, Text } = Typography;
@@ -41,18 +41,6 @@ interface ScheduleStepProps {
   isEditMode?: boolean;
 }
 
-interface ScheduleConfig {
-  scheduleType: 'manual' | 'cron';
-  enabled: boolean;
-  cron?: {
-    expression: string;
-    description: string;
-  };
-  timezone: string;
-  maxRetries: number;
-  retryDelay: number;
-  retryDelayUnit: 'seconds' | 'minutes' | 'hours';
-}
 
 const ScheduleStep: React.FC<ScheduleStepProps> = ({ 
   onNext, 
@@ -177,30 +165,45 @@ const ScheduleStep: React.FC<ScheduleStepProps> = ({
         }
       }
 
-      const formData: ScheduleConfig = {
+      const formData: any = {
         scheduleType: scheduleType,
         enabled: enabled,
         timezone: timezone,
         maxRetries: values.maxRetries || 3,
         retryDelay: values.retryDelay || 5,
-        retryDelayUnit: values.retryDelayUnit || 'minutes'
+        retryDelayUnit: values.retryDelayUnit || 'minutes',
+        status: 'active',
+        apiSourceId: sourceData?.id || null,
+        apiRequestId: requestData?.id || null,
+        apiExtractId: extractData?.id || null,
+        destinationId: destinationData?.id || null
       };
 
       // Add schedule-specific configuration
       if (scheduleType === 'cron') {
-        formData.cron = {
-          expression: values.cronExpression || '0 */30 * * * *',
-          description: cronPresets.find(p => p.expression === values.cronExpression)?.description || 'Custom schedule'
-        };
+        formData.cronExpression = values.cronExpression || '0 */30 * * * *';
+        formData.cronDescription = cronPresets.find(p => p.expression === values.cronExpression)?.description || 'Custom schedule';
       }
 
-
       console.log('Schedule configuration to save:', formData);
-      message.success('Schedule configuration saved successfully!');
 
-      // Move to next step
-      if (onNext) {
-        onNext(formData);
+      // Save to backend
+      const response = await scheduleApi.createSchedule(formData);
+      
+      if (response.success) {
+        message.success('Schedule configuration saved successfully!');
+        
+        // Move to next step with the saved data
+        if (onNext) {
+          onNext({
+            ...formData,
+            id: response.data?.id,
+            createdAt: response.data?.createdAt,
+            updatedAt: response.data?.updatedAt
+          });
+        }
+      } else {
+        message.error(response.message || 'Failed to save schedule configuration');
       }
     } catch (error) {
       console.error('Failed to save schedule configuration:', error);

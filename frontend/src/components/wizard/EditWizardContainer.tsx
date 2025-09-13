@@ -11,6 +11,7 @@ import apiSourceApi from '../../services/apiSourceApi';
 import apiRequestApi from '../../services/apiRequestApi';
 import apiExtractApi from '../../services/apiExtractApi';
 import destinationApi from '../../services/destinationApi';
+import scheduleApi from '../../services/scheduleApi';
 import { ApiSource, ApiRequest, ApiExtract } from '../../types';
 
 const { Step } = Steps;
@@ -40,12 +41,13 @@ const EditWizardContainer: React.FC = () => {
   });
 
   // Determine which step to resume from based on existing data
-  const determineResumeStep = (sourceData: ApiSource | null, requestData: ApiRequest | null, extractData: ApiExtract | null, destinationData: any): number => {
+  const determineResumeStep = (sourceData: ApiSource | null, requestData: ApiRequest | null, extractData: ApiExtract | null, destinationData: any, scheduleData: any): number => {
     if (!sourceData || !sourceData.id) return 0; // Start from source step
     if (!requestData || !requestData.id) return 1; // Resume from request step
     if (!extractData || !extractData.id) return 2; // Resume from extract step
     if (!destinationData || !destinationData.id) return 3; // Resume from destination step
-    return 4; // Resume from schedule step (destination exists, continue to schedule)
+    if (!scheduleData || !scheduleData.id) return 4; // Resume from schedule step
+    return 5; // Resume from review step (all data exists)
   };
 
   // Load existing data for the source
@@ -72,6 +74,7 @@ const EditWizardContainer: React.FC = () => {
       const requests = requestsResponse.success ? requestsResponse.data || [] : [];
       let extracts: ApiExtract[] = [];
       let destinationData: any = null;
+      let scheduleData: any = null;
       
       if (requests.length > 0) {
         // Use the first request for now (could be enhanced to let user choose)
@@ -94,12 +97,21 @@ const EditWizardContainer: React.FC = () => {
           if (destinations.length > 0) {
             destinationData = destinations[0];
             setWizardData(prev => ({ ...prev, destination: destinationData || null }));
+            
+            // Load associated schedules
+            const schedulesResponse = await scheduleApi.getSchedulesBySource(Number(id));
+            const schedules = schedulesResponse.success ? schedulesResponse.data || [] : [];
+            
+            if (schedules.length > 0) {
+              scheduleData = schedules[0];
+              setWizardData(prev => ({ ...prev, schedule: scheduleData || null }));
+            }
           }
         }
       }
       
       // Determine which step to resume from
-      const resumeStep = determineResumeStep(sourceData || null, requests[0] || null, extracts[0] || null, destinationData);
+      const resumeStep = determineResumeStep(sourceData || null, requests[0] || null, extracts[0] || null, destinationData, scheduleData);
       setCurrentStep(resumeStep);
       
     } catch (error) {

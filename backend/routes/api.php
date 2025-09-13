@@ -6,6 +6,7 @@ use App\Http\Controllers\ApiSourceController;
 use App\Http\Controllers\ApiRequestController;
 use App\Http\Controllers\ApiExtractController;
 use App\Http\Controllers\DestinationController;
+use App\Http\Controllers\ScheduleController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -61,3 +62,9 @@ Route::apiResource('api-extracts', ApiExtractController::class);
 
 // Destination Routes
 Route::apiResource('destinations', DestinationController::class);
+
+// Schedule Routes - specific routes must come before resource routes
+Route::get('/schedules/active', [ScheduleController::class, 'getActive']);
+Route::get('/schedules/cron', [ScheduleController::class, 'getCron']);
+Route::get('/schedules/source/{sourceId}', [ScheduleController::class, 'getBySource']);
+Route::apiResource('schedules', ScheduleController::class);

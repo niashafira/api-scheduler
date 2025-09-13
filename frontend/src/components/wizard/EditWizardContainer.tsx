@@ -6,6 +6,7 @@ import SourceStep from './SourceStep';
 import RequestStep from './RequestStep';
 import ExtractStep from './ExtractStep';
 import DestinationStep from './DestinationStep';
+import ScheduleStep from './ScheduleStep';
 import apiSourceApi from '../../services/apiSourceApi';
 import apiRequestApi from '../../services/apiRequestApi';
 import apiExtractApi from '../../services/apiExtractApi';
@@ -170,7 +171,19 @@ const EditWizardContainer: React.FC = () => {
     {
       title: 'Schedule',
       description: 'Set Schedule',
-      content: <div>Schedule Step (Coming Soon)</div>
+      content: <ScheduleStep 
+        onNext={(data) => {
+          setWizardData({...wizardData, schedule: data});
+          setCurrentStep(currentStep + 1);
+        }}
+        onPrevious={() => setCurrentStep(currentStep - 1)}
+        sourceData={wizardData.source}
+        requestData={wizardData.request}
+        extractData={wizardData.extract}
+        destinationData={wizardData.destination}
+        initialData={wizardData.schedule}
+        isEditMode={true}
+      />
     },
     {
       title: 'Review',

@@ -6,6 +6,7 @@ import SourceStep from './SourceStep';
 import RequestStep from './RequestStep';
 import ExtractStep from './ExtractStep';
 import DestinationStep from './DestinationStep';
+import ScheduleStep from './ScheduleStep';
 import { ApiSource, ApiRequest, ApiExtract } from '../../types';
 
 const { Step } = Steps;
@@ -85,7 +86,17 @@ const WizardContainer: React.FC = () => {
     {
       title: 'Schedule',
       description: 'Set Schedule',
-      content: <div>Schedule Step (Coming Soon)</div>
+      content: <ScheduleStep 
+        onNext={(data) => {
+          setWizardData({...wizardData, schedule: data});
+          setCurrentStep(currentStep + 1);
+        }}
+        onPrevious={() => setCurrentStep(currentStep - 1)}
+        sourceData={wizardData.source}
+        requestData={wizardData.request}
+        extractData={wizardData.extract}
+        destinationData={wizardData.destination}
+      />
     },
     {
       title: 'Review',

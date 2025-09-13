@@ -23,7 +23,11 @@ class Schedule extends Model
         'api_source_id',
         'api_request_id',
         'api_extract_id',
-        'destination_id'
+        'destination_id',
+        'last_executed_at',
+        'next_execution_at',
+        'execution_count',
+        'failure_count'
     ];
 
     protected $casts = [
@@ -34,7 +38,11 @@ class Schedule extends Model
         'cron_description' => 'string',
         'timezone' => 'string',
         'retry_delay_unit' => 'string',
-        'status' => 'string'
+        'status' => 'string',
+        'last_executed_at' => 'datetime',
+        'next_execution_at' => 'datetime',
+        'execution_count' => 'integer',
+        'failure_count' => 'integer'
     ];
 
     /**

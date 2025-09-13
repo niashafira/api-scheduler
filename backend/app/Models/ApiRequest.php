@@ -78,24 +78,24 @@ class ApiRequest extends Model
 
         // Handle empty path
         if (empty($this->path) || $this->path === '/') {
-            return $baseUrl;
-        }
+            $path = '';
+        } else {
+            // Add leading slash to path if not present
+            $path = $this->path;
+            if (substr($path, 0, 1) !== '/') {
+                $path = '/' . $path;
+            }
 
-        // Add leading slash to path if not present
-        $path = $this->path;
-        if (substr($path, 0, 1) !== '/') {
-            $path = '/' . $path;
-        }
-
-        // Replace path parameters
-        if (!empty($this->path_params)) {
-            foreach ($this->path_params as $param) {
-                if (!empty($param['name']) && isset($param['value'])) {
-                    $path = str_replace(
-                        '{' . $param['name'] . '}',
-                        urlencode($param['value']),
-                        $path
-                    );
+            // Replace path parameters
+            if (!empty($this->path_params)) {
+                foreach ($this->path_params as $param) {
+                    if (!empty($param['name']) && isset($param['value'])) {
+                        $path = str_replace(
+                            '{' . $param['name'] . '}',
+                            urlencode($param['value']),
+                            $path
+                        );
+                    }
                 }
             }
         }

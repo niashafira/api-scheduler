@@ -297,4 +297,171 @@ class ScheduleService
 
         return $preparedData;
     }
+
+    /**
+     * Pause a schedule by setting enabled to false.
+     */
+    public function pauseSchedule(int $id): array
+    {
+        try {
+            $updated = $this->scheduleRepository->update($id, ['enabled' => false]);
+
+            if (!$updated) {
+                return [
+                    'success' => false,
+                    'data' => null,
+                    'message' => 'Schedule not found or update failed'
+                ];
+            }
+
+            return [
+                'success' => true,
+                'data' => null,
+                'message' => 'Schedule paused successfully'
+            ];
+        } catch (\Exception $e) {
+            Log::error('Failed to pause schedule: ' . $e->getMessage());
+
+            return [
+                'success' => false,
+                'data' => null,
+                'message' => 'Failed to pause schedule: ' . $e->getMessage()
+            ];
+        }
+    }
+
+    /**
+     * Resume a schedule by setting enabled to true.
+     */
+    public function resumeSchedule(int $id): array
+    {
+        try {
+            $updated = $this->scheduleRepository->update($id, ['enabled' => true]);
+
+            if (!$updated) {
+                return [
+                    'success' => false,
+                    'data' => null,
+                    'message' => 'Schedule not found or update failed'
+                ];
+            }
+
+            return [
+                'success' => true,
+                'data' => null,
+                'message' => 'Schedule resumed successfully'
+            ];
+        } catch (\Exception $e) {
+            Log::error('Failed to resume schedule: ' . $e->getMessage());
+
+            return [
+                'success' => false,
+                'data' => null,
+                'message' => 'Failed to resume schedule: ' . $e->getMessage()
+            ];
+        }
+    }
+
+    /**
+     * Get schedule statistics.
+     */
+    public function getScheduleStats(): array
+    {
+        try {
+            $total = $this->scheduleRepository->getAll()->count();
+            $active = $this->scheduleRepository->getAll(['enabled' => true])->count();
+            $paused = $this->scheduleRepository->getAll(['enabled' => false])->count();
+            $failed = $this->scheduleRepository->getAll(['status' => 'failed'])->count();
+            $cron = $this->scheduleRepository->getAll(['schedule_type' => 'cron'])->count();
+            $manual = $this->scheduleRepository->getAll(['schedule_type' => 'manual'])->count();
+
+            return [
+                'success' => true,
+                'data' => [
+                    'total' => $total,
+                    'active' => $active,
+                    'paused' => $paused,
+                    'failed' => $failed,
+                    'cron' => $cron,
+                    'manual' => $manual
+                ],
+                'message' => 'Schedule statistics retrieved successfully'
+            ];
+        } catch (\Exception $e) {
+            Log::error('Failed to get schedule stats: ' . $e->getMessage());
+
+            return [
+                'success' => false,
+                'data' => null,
+                'message' => 'Failed to retrieve schedule statistics: ' . $e->getMessage()
+            ];
+        }
+    }
+
+    /**
+     * Reset failure count for a schedule.
+     */
+    public function resetFailureCount(int $id): array
+    {
+        try {
+            $updated = $this->scheduleRepository->update($id, ['failure_count' => 0]);
+
+            if (!$updated) {
+                return [
+                    'success' => false,
+                    'data' => null,
+                    'message' => 'Schedule not found or update failed'
+                ];
+            }
+
+            return [
+                'success' => true,
+                'data' => null,
+                'message' => 'Failure count reset successfully'
+            ];
+        } catch (\Exception $e) {
+            Log::error('Failed to reset failure count: ' . $e->getMessage());
+
+            return [
+                'success' => false,
+                'data' => null,
+                'message' => 'Failed to reset failure count: ' . $e->getMessage()
+            ];
+        }
+    }
+
+    /**
+     * Execute a schedule manually (for testing).
+     */
+    public function executeScheduleManually(int $id): array
+    {
+        try {
+            $schedule = $this->scheduleRepository->getById($id);
+
+            if (!$schedule) {
+                return [
+                    'success' => false,
+                    'data' => null,
+                    'message' => 'Schedule not found'
+                ];
+            }
+
+            // Dispatch the job immediately
+            \App\Jobs\ExecuteScheduledApiCall::dispatch($schedule);
+
+            return [
+                'success' => true,
+                'data' => null,
+                'message' => 'Schedule execution dispatched successfully'
+            ];
+        } catch (\Exception $e) {
+            Log::error('Failed to execute schedule manually: ' . $e->getMessage());
+
+            return [
+                'success' => false,
+                'data' => null,
+                'message' => 'Failed to execute schedule: ' . $e->getMessage()
+            ];
+        }
+    }
 }

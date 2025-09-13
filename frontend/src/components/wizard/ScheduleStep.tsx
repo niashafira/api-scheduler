@@ -42,12 +42,8 @@ interface ScheduleStepProps {
 }
 
 interface ScheduleConfig {
-  scheduleType: 'manual' | 'interval' | 'cron' | 'once';
+  scheduleType: 'manual' | 'cron';
   enabled: boolean;
-  interval?: {
-    value: number;
-    unit: 'minutes' | 'hours' | 'days' | 'weeks';
-  };
   cron?: {
     expression: string;
     description: string;
@@ -69,7 +65,7 @@ const ScheduleStep: React.FC<ScheduleStepProps> = ({
   isEditMode = false 
 }) => {
   const [form] = Form.useForm();
-  const [scheduleType, setScheduleType] = useState<'manual' | 'interval' | 'cron' | 'once'>('manual');
+  const [scheduleType, setScheduleType] = useState<'manual' | 'cron'>('manual');
   const [enabled, setEnabled] = useState<boolean>(true);
   const [customCron, setCustomCron] = useState<boolean>(false);
 
@@ -88,21 +84,8 @@ const ScheduleStep: React.FC<ScheduleStepProps> = ({
     { expression: '0 0 0 1 * *', description: 'Monthly on the 1st' }
   ];
 
-  // Timezone options
-  const timezones = [
-    'UTC',
-    'America/New_York',
-    'America/Chicago',
-    'America/Denver',
-    'America/Los_Angeles',
-    'Europe/London',
-    'Europe/Paris',
-    'Europe/Berlin',
-    'Asia/Tokyo',
-    'Asia/Shanghai',
-    'Asia/Kolkata',
-    'Australia/Sydney'
-  ];
+  // Hardcoded to Jakarta timezone
+  const timezone = 'Asia/Jakarta';
 
   // Initialize form when component mounts
   useEffect(() => {
@@ -119,10 +102,8 @@ const ScheduleStep: React.FC<ScheduleStepProps> = ({
     form.setFieldsValue({
       scheduleType: initialData.scheduleType || 'manual',
       enabled: initialData.enabled !== false,
-      intervalValue: initialData.interval?.value || 1,
-      intervalUnit: initialData.interval?.unit || 'hours',
       cronExpression: initialData.cron?.expression || '',
-      timezone: initialData.timezone || 'UTC',
+      timezone: timezone,
       maxRetries: initialData.maxRetries || 3,
       retryDelay: initialData.retryDelay || 5,
       retryDelayUnit: initialData.retryDelayUnit || 'minutes'
@@ -137,10 +118,8 @@ const ScheduleStep: React.FC<ScheduleStepProps> = ({
     form.setFieldsValue({
       scheduleType: 'manual',
       enabled: true,
-      intervalValue: 1,
-      intervalUnit: 'hours',
       cronExpression: '0 */30 * * * *',
-      timezone: 'UTC',
+      timezone: timezone,
       maxRetries: 3,
       retryDelay: 5,
       retryDelayUnit: 'minutes'
@@ -154,8 +133,6 @@ const ScheduleStep: React.FC<ScheduleStepProps> = ({
     // Reset form values when changing schedule type
     if (value === 'manual') {
       form.setFieldsValue({
-        intervalValue: 1,
-        intervalUnit: 'hours',
         cronExpression: '0 */30 * * * *'
       });
     }
@@ -203,19 +180,14 @@ const ScheduleStep: React.FC<ScheduleStepProps> = ({
       const formData: ScheduleConfig = {
         scheduleType: scheduleType,
         enabled: enabled,
-        timezone: values.timezone || 'UTC',
+        timezone: timezone,
         maxRetries: values.maxRetries || 3,
         retryDelay: values.retryDelay || 5,
         retryDelayUnit: values.retryDelayUnit || 'minutes'
       };
 
       // Add schedule-specific configuration
-      if (scheduleType === 'interval') {
-        formData.interval = {
-          value: values.intervalValue || 1,
-          unit: values.intervalUnit || 'hours'
-        };
-      } else if (scheduleType === 'cron') {
+      if (scheduleType === 'cron') {
         formData.cron = {
           expression: values.cronExpression || '0 */30 * * * *',
           description: cronPresets.find(p => p.expression === values.cronExpression)?.description || 'Custom schedule'
@@ -240,16 +212,10 @@ const ScheduleStep: React.FC<ScheduleStepProps> = ({
     switch (scheduleType) {
       case 'manual':
         return 'Execute manually when needed';
-      case 'interval':
-        const intervalValue = form.getFieldValue('intervalValue') || 1;
-        const intervalUnit = form.getFieldValue('intervalUnit') || 'hours';
-        return `Execute every ${intervalValue} ${intervalUnit}`;
       case 'cron':
         const cronExpression = form.getFieldValue('cronExpression') || '0 */30 * * * *';
         const preset = cronPresets.find(p => p.expression === cronExpression);
         return preset ? preset.description : `Custom cron: ${cronExpression}`;
-      case 'once':
-        return 'Execute once at a specific time';
       default:
         return 'No schedule configured';
     }
@@ -264,10 +230,8 @@ const ScheduleStep: React.FC<ScheduleStepProps> = ({
         initialValues={{
           scheduleType: 'manual',
           enabled: true,
-          intervalValue: 1,
-          intervalUnit: 'hours',
           cronExpression: '0 */30 * * * *',
-          timezone: 'UTC',
+          timezone: timezone,
           maxRetries: 3,
           retryDelay: 5,
           retryDelayUnit: 'minutes'
@@ -309,55 +273,15 @@ const ScheduleStep: React.FC<ScheduleStepProps> = ({
                       <Text type="secondary">Run manually when needed</Text>
                     </Space>
                   </Radio>
-                  <Radio value="interval">
-                    <Space direction="vertical" size={0}>
-                      <Text strong>Interval-based</Text>
-                      <Text type="secondary">Run at regular intervals</Text>
-                    </Space>
-                  </Radio>
                   <Radio value="cron">
                     <Space direction="vertical" size={0}>
                       <Text strong>Cron Expression</Text>
                       <Text type="secondary">Advanced scheduling with cron syntax</Text>
                     </Space>
                   </Radio>
-                  <Radio value="once">
-                    <Space direction="vertical" size={0}>
-                      <Text strong>One-time Execution</Text>
-                      <Text type="secondary">Run once at a specific time</Text>
-                    </Space>
-                  </Radio>
                 </Space>
               </Radio.Group>
             </Form.Item>
-
-            {scheduleType === 'interval' && (
-              <Card size="small" style={{ marginBottom: 16 }}>
-                <Space>
-                  <Form.Item
-                    name="intervalValue"
-                    label="Interval"
-                    rules={[{ required: true, message: 'Please enter interval value' }]}
-                    style={{ marginBottom: 0 }}
-                  >
-                    <InputNumber min={1} max={999} />
-                  </Form.Item>
-                  <Form.Item
-                    name="intervalUnit"
-                    label="Unit"
-                    rules={[{ required: true, message: 'Please select interval unit' }]}
-                    style={{ marginBottom: 0 }}
-                  >
-                    <Select style={{ width: 120 }}>
-                      <Option value="minutes">Minutes</Option>
-                      <Option value="hours">Hours</Option>
-                      <Option value="days">Days</Option>
-                      <Option value="weeks">Weeks</Option>
-                    </Select>
-                  </Form.Item>
-                </Space>
-              </Card>
-            )}
 
             {scheduleType === 'cron' && (
               <Card size="small" style={{ marginBottom: 16 }}>
@@ -419,17 +343,13 @@ const ScheduleStep: React.FC<ScheduleStepProps> = ({
 
             <Divider orientation="left">Advanced Settings</Divider>
 
-            <Form.Item
-              name="timezone"
-              label="Timezone"
-              rules={[{ required: true, message: 'Please select timezone' }]}
-            >
-              <Select>
-                {timezones.map(tz => (
-                  <Option key={tz} value={tz}>{tz}</Option>
-                ))}
-              </Select>
-            </Form.Item>
+            <Alert
+              message="Timezone"
+              description={`All schedules will run in Jakarta time (${timezone})`}
+              type="info"
+              showIcon
+              style={{ marginBottom: 16 }}
+            />
 
             <Collapse size="small">
               <Panel header="Error Handling" key="errorHandling">

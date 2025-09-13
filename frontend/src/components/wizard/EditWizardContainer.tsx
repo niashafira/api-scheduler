@@ -9,6 +9,7 @@ import DestinationStep from './DestinationStep';
 import apiSourceApi from '../../services/apiSourceApi';
 import apiRequestApi from '../../services/apiRequestApi';
 import apiExtractApi from '../../services/apiExtractApi';
+import destinationApi from '../../services/destinationApi';
 import { ApiSource, ApiRequest, ApiExtract } from '../../types';
 
 const { Step } = Steps;
@@ -38,11 +39,12 @@ const EditWizardContainer: React.FC = () => {
   });
 
   // Determine which step to resume from based on existing data
-  const determineResumeStep = (sourceData: ApiSource | null, requestData: ApiRequest | null, extractData: ApiExtract | null): number => {
+  const determineResumeStep = (sourceData: ApiSource | null, requestData: ApiRequest | null, extractData: ApiExtract | null, destinationData: any): number => {
     if (!sourceData || !sourceData.id) return 0; // Start from source step
     if (!requestData || !requestData.id) return 1; // Resume from request step
     if (!extractData || !extractData.id) return 2; // Resume from extract step
-    return 3; // Resume from schema step
+    if (!destinationData || !destinationData.id) return 3; // Resume from destination step
+    return 4; // Resume from schedule step (destination exists, continue to schedule)
   };
 
   // Load existing data for the source
@@ -68,6 +70,7 @@ const EditWizardContainer: React.FC = () => {
       const requestsResponse = await apiRequestApi.getApiRequestsBySource(Number(id));
       const requests = requestsResponse.success ? requestsResponse.data || [] : [];
       let extracts: ApiExtract[] = [];
+      let destinationData: any = null;
       
       if (requests.length > 0) {
         // Use the first request for now (could be enhanced to let user choose)
@@ -82,11 +85,20 @@ const EditWizardContainer: React.FC = () => {
         if (extracts.length > 0) {
           const extractData = extracts[0];
           setWizardData(prev => ({ ...prev, extract: extractData || null }));
+          
+          // Load associated destinations
+          const destinationsResponse = await destinationApi.getDestinationsBySource(Number(id));
+          const destinations = destinationsResponse.success ? destinationsResponse.data || [] : [];
+          
+          if (destinations.length > 0) {
+            destinationData = destinations[0];
+            setWizardData(prev => ({ ...prev, destination: destinationData || null }));
+          }
         }
       }
       
       // Determine which step to resume from
-      const resumeStep = determineResumeStep(sourceData || null, requests[0] || null, extracts[0] || null);
+      const resumeStep = determineResumeStep(sourceData || null, requests[0] || null, extracts[0] || null, destinationData);
       setCurrentStep(resumeStep);
       
     } catch (error) {

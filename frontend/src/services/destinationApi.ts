@@ -66,6 +66,11 @@ class DestinationApi {
     return this.request<any[]>('/destinations');
   }
 
+  // Get destinations by source ID
+  async getDestinationsBySource(sourceId: number): Promise<ApiResponse<any[]>> {
+    return this.request<any[]>(`/destinations?source_id=${sourceId}`);
+  }
+
   // Get a specific destination
   async getDestination(id: number): Promise<ApiResponse<any>> {
     return this.request<any>(`/destinations/${id}`);

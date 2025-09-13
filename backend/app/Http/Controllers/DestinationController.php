@@ -21,9 +21,26 @@ class DestinationController extends Controller
     /**
      * Display a listing of the resource.
      */
-    public function index(): JsonResponse
+    public function index(Request $request): JsonResponse
     {
-        $destinations = Destination::with(['apiSource', 'apiRequest', 'apiExtract'])->get();
+        $query = Destination::with(['apiSource', 'apiRequest', 'apiExtract']);
+
+        // Filter by source ID if provided
+        if ($request->has('source_id')) {
+            $query->where('api_source_id', $request->get('source_id'));
+        }
+
+        // Filter by request ID if provided
+        if ($request->has('request_id')) {
+            $query->where('api_request_id', $request->get('request_id'));
+        }
+
+        // Filter by extract ID if provided
+        if ($request->has('extract_id')) {
+            $query->where('api_extract_id', $request->get('extract_id'));
+        }
+
+        $destinations = $query->get();
 
         $transformedData = ResponseTransformer::toCamelCase($destinations->toArray());
 

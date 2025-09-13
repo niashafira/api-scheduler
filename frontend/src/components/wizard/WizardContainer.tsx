@@ -15,10 +15,7 @@ interface WizardData {
   source: ApiSource | null;
   request: ApiRequest | null;
   extract: ApiExtract | null;
-  schema: any;
   destination: any;
-  loadStrategy: any;
-  pagination: any;
   schedule: any;
   review: any;
 }
@@ -30,10 +27,7 @@ const WizardContainer: React.FC = () => {
     source: null,
     request: null,
     extract: null,
-    schema: {},
     destination: {},
-    loadStrategy: {},
-    pagination: {},
     schedule: {},
     review: {}
   });
@@ -89,16 +83,6 @@ const WizardContainer: React.FC = () => {
       />
     },
     {
-      title: 'Load Strategy',
-      description: 'Load Strategy & State',
-      content: <div>Load Strategy Step (Coming Soon)</div>
-    },
-    {
-      title: 'Pagination',
-      description: 'Pagination & Limits',
-      content: <div>Pagination Step (Coming Soon)</div>
-    },
-    {
       title: 'Schedule',
       description: 'Set Schedule',
       content: <div>Schedule Step (Coming Soon)</div>
@@ -107,11 +91,6 @@ const WizardContainer: React.FC = () => {
       title: 'Review',
       description: 'Review & Test',
       content: <div>Review & Test Step (Coming Soon)</div>
-    },
-    {
-      title: 'Enable',
-      description: 'Enable & Monitor',
-      content: <div>Enable & Monitor Step (Coming Soon)</div>
     }
   ];
 

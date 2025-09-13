@@ -202,7 +202,6 @@ const EditWizardContainer: React.FC = () => {
       title: 'Review',
       description: 'Review & Test',
       content: <ReviewStep 
-        onPrevious={() => setCurrentStep(currentStep - 1)}
         onFinish={() => {
           message.success('API Call Scheduler configuration updated successfully!');
           navigate('/sources');

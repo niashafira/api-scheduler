@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import {
   Card,
   Button,
@@ -11,13 +11,7 @@ import {
   Row,
   Col,
   Statistic,
-  Timeline,
-  Badge,
-  message,
-  Spin,
-  Collapse,
-  Table,
-  Tooltip
+  Collapse
 } from 'antd';
 import {
   CheckCircleOutlined,
@@ -25,19 +19,14 @@ import {
   ApiOutlined,
   DatabaseOutlined,
   SettingOutlined,
-  PlayCircleOutlined,
-  ReloadOutlined,
-  InfoCircleOutlined,
-  WarningOutlined
+  PlayCircleOutlined
 } from '@ant-design/icons';
 import { ApiSource, ApiRequest, ApiExtract } from '../../types';
-import scheduleApi from '../../services/scheduleApi';
 
-const { Title, Text, Paragraph } = Typography;
+const { Title, Text } = Typography;
 const { Panel } = Collapse;
 
 interface ReviewStepProps {
-  onPrevious?: () => void;
   onFinish?: () => void;
   sourceData?: ApiSource | null;
   requestData?: ApiRequest | null;
@@ -47,15 +36,8 @@ interface ReviewStepProps {
   isEditMode?: boolean;
 }
 
-interface TestResult {
-  success: boolean;
-  message: string;
-  data?: any;
-  error?: string;
-}
 
 const ReviewStep: React.FC<ReviewStepProps> = ({
-  onPrevious,
   onFinish,
   sourceData,
   requestData,
@@ -64,114 +46,7 @@ const ReviewStep: React.FC<ReviewStepProps> = ({
   scheduleData,
   isEditMode = false
 }) => {
-  const [testing, setTesting] = useState<boolean>(false);
-  const [testResults, setTestResults] = useState<TestResult[]>([]);
 
-  const handleTestConfiguration = async (): Promise<void> => {
-    setTesting(true);
-    setTestResults([]);
-    
-    const results: TestResult[] = [];
-    
-    try {
-      // Test 1: API Source Connection
-      results.push({
-        success: true,
-        message: 'API Source configuration is valid',
-        data: { name: sourceData?.name, baseUrl: sourceData?.baseUrl }
-      });
-
-      // Test 2: API Request Configuration
-      if (requestData) {
-        results.push({
-          success: true,
-          message: 'API Request configuration is valid',
-          data: { 
-            method: requestData.method, 
-            path: requestData.path,
-            headers: requestData.headers?.length || 0
-          }
-        });
-      }
-
-      // Test 3: Data Extraction Configuration
-      if (extractData) {
-        results.push({
-          success: true,
-          message: 'Data Extraction configuration is valid',
-          data: { 
-            extractionPaths: extractData.extractionPaths?.length || 0,
-            rootArrayPath: extractData.rootArrayPath
-          }
-        });
-      }
-
-      // Test 4: Destination Configuration
-      if (destinationData) {
-        results.push({
-          success: true,
-          message: 'Destination configuration is valid',
-          data: { 
-            tableName: destinationData.tableName,
-            columns: destinationData.columns?.length || 0
-          }
-        });
-      }
-
-      // Test 5: Schedule Configuration
-      if (scheduleData) {
-        results.push({
-          success: true,
-          message: 'Schedule configuration is valid',
-          data: { 
-            scheduleType: scheduleData.scheduleType,
-            enabled: scheduleData.enabled,
-            timezone: scheduleData.timezone
-          }
-        });
-      }
-
-      // Test 6: End-to-End Integration Test
-      try {
-        // This would be a real API call in production
-        await new Promise(resolve => setTimeout(resolve, 2000)); // Simulate API call
-        
-        results.push({
-          success: true,
-          message: 'End-to-end integration test passed',
-          data: { 
-            status: 'All components working together',
-            timestamp: new Date().toISOString()
-          }
-        });
-      } catch (error) {
-        results.push({
-          success: false,
-          message: 'End-to-end integration test failed',
-          error: error instanceof Error ? error.message : 'Unknown error'
-        });
-      }
-
-    } catch (error) {
-      results.push({
-        success: false,
-        message: 'Configuration test failed',
-        error: error instanceof Error ? error.message : 'Unknown error'
-      });
-    }
-
-    setTestResults(results);
-    setTesting(false);
-    
-    const successCount = results.filter(r => r.success).length;
-    const totalCount = results.length;
-    
-    if (successCount === totalCount) {
-      message.success(`All tests passed! (${successCount}/${totalCount})`);
-    } else {
-      message.warning(`Some tests failed. (${successCount}/${totalCount})`);
-    }
-  };
 
   const getStatusColor = (status: string): string => {
     switch (status) {
@@ -202,36 +77,12 @@ const ReviewStep: React.FC<ReviewStepProps> = ({
     return 'Unknown schedule type';
   };
 
-  const columns = [
-    {
-      title: 'Test',
-      dataIndex: 'message',
-      key: 'message',
-    },
-    {
-      title: 'Status',
-      dataIndex: 'success',
-      key: 'success',
-      render: (success: boolean) => (
-        <Badge 
-          status={success ? 'success' : 'error'} 
-          text={success ? 'Passed' : 'Failed'} 
-        />
-      ),
-    },
-    {
-      title: 'Details',
-      dataIndex: 'data',
-      key: 'data',
-      render: (data: any) => data ? JSON.stringify(data, null, 2) : '-',
-    },
-  ];
 
   return (
-    <Card title={<Title level={4}><CheckCircleOutlined /> Step 6: Review & Test</Title>} bordered={false}>
+    <Card title={<Title level={4}><CheckCircleOutlined /> Step 6: Review Configuration</Title>} bordered={false}>
       <Alert
         message="Configuration Review"
-        description="Review your API call scheduler configuration and run tests to ensure everything is working correctly."
+        description="Review your API call scheduler configuration to ensure everything is set up correctly."
         type="info"
         showIcon
         style={{ marginBottom: 24 }}
@@ -306,11 +157,21 @@ const ReviewStep: React.FC<ReviewStepProps> = ({
             {/* API Request Details */}
             <Panel header="API Request Configuration" key="request">
               {requestData ? (
-                <Descriptions column={2} size="small">
+                <Descriptions column={1} size="small">
+                  <Descriptions.Item label="Complete URL">
+                    {sourceData?.baseUrl}{requestData.path}
+                    {requestData.queryParams && requestData.queryParams.length > 0 && (
+                      <span>
+                        ?{requestData.queryParams
+                          .filter(param => param.value)
+                          .map(param => `${param.name}=${param.value}`)
+                          .join('&')}
+                      </span>
+                    )}
+                  </Descriptions.Item>
                   <Descriptions.Item label="Method">
                     <Tag color="blue">{requestData.method}</Tag>
                   </Descriptions.Item>
-                  <Descriptions.Item label="Path">{requestData.path}</Descriptions.Item>
                   <Descriptions.Item label="Headers">
                     {requestData.headers?.length || 0} header(s) configured
                   </Descriptions.Item>
@@ -410,119 +271,21 @@ const ReviewStep: React.FC<ReviewStepProps> = ({
           </Collapse>
         </Col>
 
-        {/* Test Results */}
-        <Col span={24}>
-          <Card 
-            title="Test Results" 
-            size="small"
-            extra={
-              <Button 
-                type="primary" 
-                icon={<PlayCircleOutlined />}
-                onClick={handleTestConfiguration}
-                loading={testing}
-              >
-                {testing ? 'Running Tests...' : 'Run Tests'}
-              </Button>
-            }
-          >
-            {testResults.length > 0 ? (
-              <Table
-                columns={columns}
-                dataSource={testResults.map((result, index) => ({
-                  key: index,
-                  ...result
-                }))}
-                pagination={false}
-                size="small"
-              />
-            ) : (
-              <Alert
-                message="No tests run yet"
-                description="Click 'Run Tests' to validate your configuration"
-                type="info"
-                showIcon
-              />
-            )}
-          </Card>
-        </Col>
 
-        {/* Execution Timeline */}
-        <Col span={24}>
-          <Card title="Execution Timeline" size="small">
-            <Timeline>
-              <Timeline.Item 
-                dot={<ApiOutlined style={{ color: sourceData ? '#52c41a' : '#ff4d4f' }} />}
-                color={sourceData ? 'green' : 'red'}
-              >
-                <Text strong>API Source</Text>
-                <br />
-                <Text type="secondary">
-                  {sourceData ? `Configured: ${sourceData.name}` : 'Not configured'}
-                </Text>
-              </Timeline.Item>
-              <Timeline.Item 
-                dot={<SettingOutlined style={{ color: requestData ? '#52c41a' : '#ff4d4f' }} />}
-                color={requestData ? 'green' : 'red'}
-              >
-                <Text strong>API Request</Text>
-                <br />
-                <Text type="secondary">
-                  {requestData ? `Configured: ${requestData.method} ${requestData.path}` : 'Not configured'}
-                </Text>
-              </Timeline.Item>
-              <Timeline.Item 
-                dot={<DatabaseOutlined style={{ color: extractData ? '#52c41a' : '#ff4d4f' }} />}
-                color={extractData ? 'green' : 'red'}
-              >
-                <Text strong>Data Extraction</Text>
-                <br />
-                <Text type="secondary">
-                  {extractData ? `Configured: ${extractData.extractionPaths?.length || 0} paths` : 'Not configured'}
-                </Text>
-              </Timeline.Item>
-              <Timeline.Item 
-                dot={<DatabaseOutlined style={{ color: destinationData ? '#52c41a' : '#ff4d4f' }} />}
-                color={destinationData ? 'green' : 'red'}
-              >
-                <Text strong>Destination</Text>
-                <br />
-                <Text type="secondary">
-                  {destinationData ? `Configured: ${destinationData.tableName}` : 'Not configured'}
-                </Text>
-              </Timeline.Item>
-              <Timeline.Item 
-                dot={<ClockCircleOutlined style={{ color: scheduleData ? '#52c41a' : '#ff4d4f' }} />}
-                color={scheduleData ? 'green' : 'red'}
-              >
-                <Text strong>Schedule</Text>
-                <br />
-                <Text type="secondary">
-                  {scheduleData ? getScheduleDescription(scheduleData) : 'Not configured'}
-                </Text>
-              </Timeline.Item>
-            </Timeline>
-          </Card>
-        </Col>
       </Row>
 
       <Divider />
 
-      <Space>
-        {onPrevious && (
-          <Button onClick={onPrevious}>
-            Previous
-          </Button>
-        )}
+      <div style={{ textAlign: 'right' }}>
         <Button 
           type="primary" 
           size="large"
           onClick={onFinish}
           icon={<CheckCircleOutlined />}
         >
-          {isEditMode ? 'Update Configuration' : 'Create Configuration'}
+          Confirm
         </Button>
-      </Space>
+      </div>
     </Card>
   );
 };

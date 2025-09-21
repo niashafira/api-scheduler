@@ -25,16 +25,7 @@ class Kernel extends ConsoleKernel
      */
     protected function schedule(Schedule $schedule)
     {
-        // Run every minute to check for scheduled tasks
-        $schedule->command('scheduler:process')
-            ->everyMinute()
-            ->withoutOverlapping()
-            ->runInBackground();
-
-        // Run monitoring every 5 minutes
-        $schedule->command('scheduler:monitor')
-            ->everyFiveMinutes()
-            ->withoutOverlapping();
+        // Schedules are now registered in routes/console.php for Laravel 11
     }
 
     /**

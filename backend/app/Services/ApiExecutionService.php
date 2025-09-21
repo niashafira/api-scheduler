@@ -258,13 +258,15 @@ class ApiExecutionService
                 $insertData[] = $rowData;
             }
 
-            // Insert data into the table
-            DB::table($tableName)->insert($insertData);
+            // Handle duplicates using upsert logic
+            $result = $this->upsertDataWithDuplicateHandling($tableName, $insertData, $columns);
 
             return [
                 'success' => true,
                 'message' => 'Data stored successfully',
-                'count' => count($insertData)
+                'count' => $result['inserted'],
+                'updated' => $result['updated'],
+                'skipped' => $result['skipped']
             ];
 
         } catch (\Exception $e) {
@@ -273,6 +275,79 @@ class ApiExecutionService
                 'message' => "Failed to store data: {$e->getMessage()}"
             ];
         }
+    }
+
+    /**
+     * Handle data insertion with duplicate prevention based on primary keys
+     *
+     * @param string $tableName
+     * @param array $insertData
+     * @param array $columns
+     * @return array
+     */
+    private function upsertDataWithDuplicateHandling(string $tableName, array $insertData, array $columns): array
+    {
+        $inserted = 0;
+        $updated = 0;
+        $skipped = 0;
+
+        // Get primary key columns
+        $primaryKeyColumns = [];
+        foreach ($columns as $column) {
+            if ($column['isPrimaryKey'] ?? false) {
+                $primaryKeyColumns[] = $column['name'];
+            }
+        }
+
+        if (empty($primaryKeyColumns)) {
+            // No primary keys defined, just insert all data
+            DB::table($tableName)->insert($insertData);
+            return [
+                'inserted' => count($insertData),
+                'updated' => 0,
+                'skipped' => 0
+            ];
+        }
+
+        foreach ($insertData as $rowData) {
+            try {
+                // Build where clause for primary key fields
+                $whereClause = [];
+                foreach ($primaryKeyColumns as $pkColumn) {
+                    if (isset($rowData[$pkColumn])) {
+                        $whereClause[$pkColumn] = $rowData[$pkColumn];
+                    }
+                }
+
+                // Check if record exists
+                $existingRecord = DB::table($tableName)->where($whereClause)->first();
+
+                if ($existingRecord) {
+                    // Record exists, update it
+                    DB::table($tableName)
+                        ->where($whereClause)
+                        ->update($rowData);
+                    $updated++;
+
+                    Log::info("Updated existing record in {$tableName} with primary keys: " . json_encode($whereClause));
+                } else {
+                    // Record doesn't exist, insert it
+                    DB::table($tableName)->insert($rowData);
+                    $inserted++;
+
+                    Log::info("Inserted new record in {$tableName} with primary keys: " . json_encode($whereClause));
+                }
+            } catch (\Exception $e) {
+                Log::error("Error processing record for table {$tableName}: {$e->getMessage()}");
+                $skipped++;
+            }
+        }
+
+        return [
+            'inserted' => $inserted,
+            'updated' => $updated,
+            'skipped' => $skipped
+        ];
     }
 
     /**

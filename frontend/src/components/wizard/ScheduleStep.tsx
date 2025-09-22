@@ -150,9 +150,13 @@ const ScheduleStep: React.FC<ScheduleStepProps> = ({
   };
 
   const validateCronExpression = (expression: string): boolean => {
-    // Basic cron validation (6 fields: second minute hour day month weekday)
-    const cronRegex = /^(\*|([0-5]?\d)) (\*|([0-5]?\d)) (\*|(2[0-3]|[01]?\d)) (\*|(3[01]|[12]\d|0?[1-9])) (\*|(1[0-2]|0?[1-9])) (\*|([0-6]))$/;
-    return cronRegex.test(expression);
+    // Accept standard 6-field cron: second minute hour day month weekday
+    // Allow numbers, *, ranges (-), steps (/), and lists (,)
+    if (!expression) return false;
+    const parts = expression.trim().split(/\s+/);
+    if (parts.length !== 6) return false;
+    const fieldRegex = /^[\d*/,-]+$/;
+    return parts.every(part => fieldRegex.test(part));
   };
 
   const handleSubmit = async (values: any): Promise<void> => {

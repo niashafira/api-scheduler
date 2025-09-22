@@ -58,10 +58,18 @@ class CreateScheduleRequest extends FormRequest
                         $fail('Cron expression is required when schedule type is cron.');
                     }
                     if (!empty($value)) {
-                        // Basic cron validation (6 fields: second minute hour day month weekday)
-                        $cronRegex = '/^(\*|([0-5]?\d)) (\*|([0-5]?\d)) (\*|(2[0-3]|[01]?\d)) (\*|(3[01]|[12]\d|0?[1-9])) (\*|(1[0-2]|0?[1-9])) (\*|([0-6]))$/';
-                        if (!preg_match($cronRegex, $value)) {
+                        // Relaxed cron validation (6 fields: second minute hour day month weekday)
+                        // Allow numbers, *, ranges (-), steps (/), and lists (,)
+                        $parts = preg_split('/\s+/', trim($value));
+                        if (count($parts) !== 6) {
                             $fail('Invalid cron expression format. Expected format: second minute hour day month weekday');
+                            return;
+                        }
+                        foreach ($parts as $part) {
+                            if (!preg_match('/^[\d*\/,-]+$/', $part)) {
+                                $fail('Invalid cron expression format. Expected format: second minute hour day month weekday');
+                                return;
+                            }
                         }
                     }
                 }

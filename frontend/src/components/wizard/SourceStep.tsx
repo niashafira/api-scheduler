@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { 
   Form, 
   Input, 
@@ -8,11 +8,10 @@ import {
   Space, 
   Typography, 
   Divider,
-  Switch,
   message,
   Tabs,
   Alert,
-  Steps
+ 
 } from 'antd';
 import { 
   PlusOutlined, 
@@ -27,10 +26,9 @@ import tokenConfigApi from '../../services/tokenConfigApi';
 import apiSourceApi from '../../services/apiSourceApi';
 import { ApiSource, TokenConfig, Header } from '../../types';
 
-const { Title, Text, Paragraph } = Typography;
+const { Title, Paragraph } = Typography;
 const { Option } = Select;
 const { TabPane } = Tabs;
-const { Step } = Steps;
 
 interface SourceStepProps {
   onNext?: (data: any) => void;
@@ -39,18 +37,7 @@ interface SourceStepProps {
   isEditMode?: boolean;
 }
 
-interface TokenConfigState {
-  enabled: boolean;
-  endpoint: string;
-  method: string;
-  headers: Header[];
-  body: string;
-  tokenPath: string;
-  expiresInPath: string;
-  refreshTokenPath: string;
-  expiresIn: number;
-  refreshEnabled: boolean;
-}
+//
 
 const SourceStep: React.FC<SourceStepProps> = ({ onNext, onPrevious, initialData = null, isEditMode = false }) => {
   const [form] = Form.useForm();
@@ -60,7 +47,10 @@ const SourceStep: React.FC<SourceStepProps> = ({ onNext, onPrevious, initialData
   const [existingTokenConfigs, setExistingTokenConfigs] = useState<TokenConfig[]>([]);
   const [loadingTokenConfigs, setLoadingTokenConfigs] = useState<boolean>(false);
   const [selectedTokenConfigId, setSelectedTokenConfigId] = useState<number | null>(null);
-  const [enableTokenConfig, setEnableTokenConfig] = useState<boolean>(false);
+  
+  const [existingSources, setExistingSources] = useState<ApiSource[]>([]);
+  const [loadingExistingSources, setLoadingExistingSources] = useState<boolean>(false);
+  const [selectedExistingSourceId, setSelectedExistingSourceId] = useState<number | null>(null);
   // const [tokenConfig, setTokenConfig] = useState<TokenConfigState>({
   //   enabled: false,
   //   endpoint: '',
@@ -79,14 +69,14 @@ const SourceStep: React.FC<SourceStepProps> = ({ onNext, onPrevious, initialData
     fetchExistingTokenConfigs();
   }, []);
 
-  // Populate form with initial data when in edit mode
+  // Load existing sources when switching to the "Use Existing Source" tab
   useEffect(() => {
-    if (isEditMode && initialData) {
-      populateFormWithInitialData();
+    if (activeTab === 'existing') {
+      fetchExistingSources();
     }
-  }, [isEditMode, initialData]);
+  }, [activeTab]);
 
-  const populateFormWithInitialData = (): void => {
+  const populateFormWithInitialData = useCallback((): void => {
     if (!initialData) return;
 
     // Set form values
@@ -110,6 +100,27 @@ const SourceStep: React.FC<SourceStepProps> = ({ onNext, onPrevious, initialData
       // Load token config details
       handleTokenConfigSelect(initialData.tokenConfigId);
     }
+  }, [form, initialData]);
+
+  // Populate form with initial data when in edit mode
+  useEffect(() => {
+    if (isEditMode && initialData) {
+      populateFormWithInitialData();
+    }
+  }, [isEditMode, initialData, populateFormWithInitialData]);
+
+  const fetchExistingSources = async (): Promise<void> => {
+    try {
+      setLoadingExistingSources(true);
+      const res = await apiSourceApi.getAllApiSources();
+      const list = Array.isArray(res) ? res : (res.data || []);
+      setExistingSources(list as ApiSource[]);
+    } catch (error) {
+      console.error('Failed to fetch existing sources:', error);
+      message.error('Failed to load existing sources');
+    } finally {
+      setLoadingExistingSources(false);
+    }
   };
 
   const fetchExistingTokenConfigs = async (): Promise<void> => {
@@ -127,10 +138,7 @@ const SourceStep: React.FC<SourceStepProps> = ({ onNext, onPrevious, initialData
 
   const handleAuthTypeChange = (value: string): void => {
     setAuthType(value);
-    if (value === 'token') {
-      setEnableTokenConfig(true);
-    } else {
-      setEnableTokenConfig(false);
+    if (value !== 'token') {
       setSelectedTokenConfigId(null);
     }
   };
@@ -138,7 +146,6 @@ const SourceStep: React.FC<SourceStepProps> = ({ onNext, onPrevious, initialData
   const handleTokenConfigSelect = async (configId: number): Promise<void> => {
     if (!configId) {
       setSelectedTokenConfigId(null);
-      setEnableTokenConfig(false);
       return;
     }
 
@@ -150,11 +157,9 @@ const SourceStep: React.FC<SourceStepProps> = ({ onNext, onPrevious, initialData
         throw new Error('Invalid token configuration ID');
       }
       
-      const config = await tokenConfigApi.getTokenConfig(numericId);
-      const configData = config.data || config;
+      await tokenConfigApi.getTokenConfig(numericId);
       
       setSelectedTokenConfigId(numericId);
-      setEnableTokenConfig(true);
     } catch (error) {
       console.error('Failed to load token configuration:', error);
       message.error('Failed to load selected token configuration');
@@ -434,15 +439,23 @@ const SourceStep: React.FC<SourceStepProps> = ({ onNext, onPrevious, initialData
               label="Select Existing Source"
               rules={[{ required: true, message: 'Please select an existing source' }]}
             >
-              <Select placeholder="Select a source">
-                <Option value="source1">Example API</Option>
-                <Option value="source2">Weather API</Option>
-                <Option value="source3">E-commerce API</Option>
+              <Select 
+                placeholder="Select a source"
+                value={selectedExistingSourceId as any}
+                onChange={(value) => setSelectedExistingSourceId(value)}
+                loading={loadingExistingSources}
+                allowClear
+              >
+                {existingSources.map((src) => (
+                  <Option key={src.id} value={src.id}>
+                    {src.name} ({src.baseUrl})
+                  </Option>
+                ))}
               </Select>
             </Form.Item>
-            
+
             <Divider />
-            
+
             <Form.Item>
               <Space>
                 {onPrevious && (
@@ -450,7 +463,29 @@ const SourceStep: React.FC<SourceStepProps> = ({ onNext, onPrevious, initialData
                     Previous
                   </Button>
                 )}
-                <Button type="primary" onClick={() => onNext && onNext({ sourceId: 'source1' })}>
+                <Button 
+                  type="primary" 
+                  onClick={async () => {
+                    try {
+                      if (!selectedExistingSourceId) {
+                        message.error('Please select a source');
+                        return;
+                      }
+                      await apiSourceApi.markApiSourceAsUsed(selectedExistingSourceId);
+                      const selected = existingSources.find(s => s.id === selectedExistingSourceId);
+                      if (!selected) {
+                        message.error('Selected source not found');
+                        return;
+                      }
+                      message.success('Source selected');
+                      onNext && onNext(selected);
+                    } catch (e) {
+                      console.error('Failed to proceed with existing source:', e);
+                      message.error('Failed to select existing source');
+                    }
+                  }}
+                  disabled={!selectedExistingSourceId}
+                >
                   Next Step
                 </Button>
               </Space>

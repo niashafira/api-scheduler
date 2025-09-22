@@ -50,16 +50,16 @@ const TokenConfigForm: React.FC<TokenConfigFormProps> = ({ initialData, onSubmit
     if (initialData) {
       form.setFieldsValue({
         name: initialData.name,
-        endpoint: initialData.tokenUrl,
-        method: 'POST',
-        tokenPath: 'access_token',
-        expiresInPath: 'expires_in',
-        refreshTokenPath: initialData.refreshTokenPath || '',
-        expiresIn: 3600,
-        refreshEnabled: false,
-        body: initialData.body || '',
+        endpoint: (initialData as any).endpoint || initialData.tokenUrl || '',
+        method: (initialData as any).method || 'POST',
+        tokenPath: (initialData as any).tokenPath || 'access_token',
+        expiresInPath: (initialData as any).expiresInPath || 'expires_in',
+        refreshTokenPath: initialData.refreshTokenPath || (initialData as any).refreshTokenPath || '',
+        expiresIn: (initialData as any).expiresIn || 3600,
+        refreshEnabled: (initialData as any).refreshEnabled || false,
+        body: (initialData as any).body || '',
       });
-      setHeaders(initialData.headers || [{ key: '', value: '' }]);
+      setHeaders(((initialData as any).headers as Header[]) || initialData.headers || [{ key: '', value: '' }]);
     }
   }, [initialData, form]);
 

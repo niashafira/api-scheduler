@@ -1,31 +1,32 @@
 import React, { useState, useEffect } from 'react';
-import { Table, Button, Space, Tag, Tooltip, Modal, Typography, message } from 'antd';
+import { Table, Button, Space, Tag, Tooltip, Modal, Typography, message, Spin } from 'antd';
 import { 
   PlusOutlined, 
   EditOutlined, 
-  DeleteOutlined, 
   CheckCircleOutlined, 
   CloseCircleOutlined,
   KeyOutlined,
   PlayCircleOutlined
 } from '@ant-design/icons';
-import { useNavigate } from 'react-router-dom';
+// import { useNavigate } from 'react-router-dom';
 import TokenConfigForm from './TokenConfigForm';
 import tokenConfigApi from '../../services/tokenConfigApi';
 import { TokenConfig, TableColumnConfig, FilterOption } from '../../types';
+import { apiService } from '../../utils/apiService';
 
 const { Title, Text } = Typography;
 
 const TokenConfigsTable: React.FC = () => {
-  const navigate = useNavigate();
+  // const navigate = useNavigate();
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
-  const [loading, setLoading] = useState<boolean>(false);
-  const [deleteModalVisible, setDeleteModalVisible] = useState<boolean>(false);
-  const [configToDelete, setConfigToDelete] = useState<TokenConfig | null>(null);
   const [formModalVisible, setFormModalVisible] = useState<boolean>(false);
   const [editingConfig, setEditingConfig] = useState<TokenConfig | null>(null);
   const [tokenConfigs, setTokenConfigs] = useState<TokenConfig[]>([]);
   const [tableLoading, setTableLoading] = useState<boolean>(true);
+  const [testModalVisible, setTestModalVisible] = useState<boolean>(false);
+  const [testModalLoading, setTestModalLoading] = useState<boolean>(false);
+  const [testModalData, setTestModalData] = useState<any>(null);
+  const [testModalMeta, setTestModalMeta] = useState<{ endpoint?: string; method?: string; headers?: any[]; body?: any } | null>(null);
 
   // Load token configurations on component mount
   useEffect(() => {
@@ -55,29 +56,38 @@ const TokenConfigsTable: React.FC = () => {
     setFormModalVisible(true);
   };
 
-  const handleTestConfig = (config: TokenConfig): void => {
-    console.log('Testing token config:', config);
-    // Navigate to test page or open test modal
-  };
-
-  const showDeleteConfirm = (config: TokenConfig): void => {
-    setConfigToDelete(config);
-    setDeleteModalVisible(true);
-  };
-
-  const handleDeleteConfirm = async (): Promise<void> => {
+  const handleTestConfig = async (config: TokenConfig): Promise<void> => {
     try {
-      setLoading(true);
-      await tokenConfigApi.deleteTokenConfig(configToDelete!.id);
-      message.success('Token configuration deleted successfully');
-      setDeleteModalVisible(false);
-      setConfigToDelete(null);
-      loadTokenConfigs(); // Reload the list
-    } catch (error) {
-      console.error('Failed to delete token configuration:', error);
-      message.error('Failed to delete token configuration');
+      const endpoint = (config as any).endpoint || config.tokenUrl;
+      if (!endpoint) throw new Error('Missing token endpoint URL');
+      const method = (config as any).method || 'POST';
+      const headers = (config as any).headers || [];
+      const body = (config as any).body || '';
+      const tokenPath = (config as any).tokenPath || 'access_token';
+      const expiresInPath = (config as any).expiresInPath;
+      const refreshTokenPath = (config as any).refreshTokenPath;
+
+      setTestModalMeta({ endpoint, method, headers, body });
+      setTestModalVisible(true);
+      setTestModalLoading(true);
+
+      const result = await apiService.testTokenAcquisition({
+        endpoint,
+        method,
+        headers,
+        body,
+        tokenPath,
+        expiresInPath,
+        refreshTokenPath
+      });
+
+      setTestModalData({ ok: true, result });
+    } catch (e: any) {
+      console.error('Token config test failed:', e);
+      setTestModalData({ ok: false, error: e });
+      if (!testModalVisible) setTestModalVisible(true);
     } finally {
-      setLoading(false);
+      setTestModalLoading(false);
     }
   };
 
@@ -104,7 +114,7 @@ const TokenConfigsTable: React.FC = () => {
       title: 'Name',
       dataIndex: 'name',
       key: 'name',
-      render: (text: string) => <a>{text}</a>,
+      render: (text: string) => <span>{text}</span>,
       sorter: (a: TokenConfig, b: TokenConfig) => a.name.localeCompare(b.name),
     },
     {
@@ -184,14 +194,6 @@ const TokenConfigsTable: React.FC = () => {
               onClick={() => handleEditConfig(record)} 
             />
           </Tooltip>
-          <Tooltip title="Delete">
-            <Button 
-              type="text" 
-              danger 
-              icon={<DeleteOutlined />} 
-              onClick={() => showDeleteConfirm(record)} 
-            />
-          </Tooltip>
         </Space>
       ),
     },
@@ -225,16 +227,85 @@ const TokenConfigsTable: React.FC = () => {
       />
 
       <Modal
-        title="Delete Token Configuration"
-        open={deleteModalVisible}
-        onOk={handleDeleteConfirm}
-        confirmLoading={loading}
-        onCancel={() => setDeleteModalVisible(false)}
+        title="Test Token Connection"
+        open={testModalVisible}
+        onCancel={() => { setTestModalVisible(false); setTestModalData(null); }}
+        footer={[
+          <Button key="close" onClick={() => { setTestModalVisible(false); setTestModalData(null); }}>Close</Button>
+        ]}
+        width={800}
       >
-        <p>Are you sure you want to delete the token configuration "{configToDelete?.name}"?</p>
-        <p>This action cannot be undone.</p>
+        {testModalLoading ? (
+          <div style={{ textAlign: 'center', padding: 24 }}>
+            <Spin />
+          </div>
+        ) : (
+          <div style={{ maxHeight: 520, overflow: 'auto' }}>
+            {testModalMeta && (
+              <div style={{ marginBottom: 12 }}>
+                <Title level={5} style={{ marginBottom: 4 }}>Request</Title>
+                <div><Text strong>Endpoint: </Text><Text code>{testModalMeta.endpoint}</Text></div>
+                <div style={{ marginTop: 4 }}><Text strong>Method: </Text><Tag color="blue">{testModalMeta.method}</Tag></div>
+                {testModalMeta.headers && testModalMeta.headers.length > 0 && (
+                  <div style={{ marginTop: 6 }}>
+                    <Text strong>Headers:</Text>
+                    <div style={{ marginTop: 4 }}>
+                      {testModalMeta.headers.map((h: any, idx: number) => (
+                        <div key={idx}><Text code>{h.key}</Text>: <Text code>{h.value}</Text></div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {testModalMeta.body && (
+                  <div style={{ marginTop: 6 }}>
+                    <Text strong>Body:</Text>
+                    <pre style={{ background: '#f5f5f5', padding: 8, borderRadius: 4, whiteSpace: 'pre-wrap' }}>
+                      {typeof testModalMeta.body === 'string' ? testModalMeta.body : JSON.stringify(testModalMeta.body, null, 2)}
+                    </pre>
+                  </div>
+                )}
+              </div>
+            )}
+            {testModalData?.ok ? (
+              <>
+                <Title level={5} style={{ marginBottom: 4 }}>Result</Title>
+                <div style={{ marginBottom: 8 }}>
+                  <Text strong>Token: </Text>
+                  <code>{testModalData.result?.token ? String(testModalData.result.token).substring(0, 60) + '...' : 'N/A'}</code>
+                </div>
+                {testModalData.result?.expiresIn != null && (
+                  <div style={{ marginBottom: 8 }}>
+                    <Text strong>Expires In: </Text>{testModalData.result.expiresIn} seconds
+                  </div>
+                )}
+                {testModalData.result?.refreshToken && (
+                  <div style={{ marginBottom: 8 }}>
+                    <Text strong>Refresh Token: </Text><code>{String(testModalData.result.refreshToken).substring(0, 40)}...</code>
+                  </div>
+                )}
+                {testModalData.result?.fullResponse && (
+                  <div>
+                    <Title level={5} style={{ marginBottom: 4 }}>Full Response</Title>
+                    <pre style={{ background: '#f5f5f5', padding: 8, borderRadius: 4 }}>
+{JSON.stringify(testModalData.result.fullResponse, null, 2)}
+                    </pre>
+                  </div>
+                )}
+              </>
+            ) : testModalData ? (
+              <>
+                <Title level={5} style={{ marginBottom: 4, color: '#cf1322' }}>Error</Title>
+                <div style={{ marginBottom: 8 }}><Text>{testModalData.error?.message || 'Unknown error'}</Text></div>
+                {testModalData.error?.response && (
+                  <pre style={{ background: '#f5f5f5', padding: 8, borderRadius: 4 }}>
+{JSON.stringify(testModalData.error.response, null, 2)}
+                  </pre>
+                )}
+              </>
+            ) : null}
+          </div>
+        )}
       </Modal>
-
       <Modal
         title={editingConfig ? 'Edit Token Configuration' : 'Create Token Configuration'}
         open={formModalVisible}

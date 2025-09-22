@@ -168,13 +168,7 @@ const Schedules: React.FC = () => {
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
         <Title level={4}>Scheduled Jobs</Title>
-        <Button 
-          type="primary" 
-          icon={<PlusOutlined />} 
-          onClick={() => navigate('/sources/new')}
-        >
-          Create Schedule
-        </Button>
+    
       </div>
       {loading ? (
         <div style={{ textAlign: 'center', padding: '40px' }}>

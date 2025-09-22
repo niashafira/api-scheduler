@@ -114,9 +114,6 @@ class ScheduleService
     public function updateSchedule(int $id, array $data): array
     {
         try {
-            // Validate required relationships
-            $this->validateScheduleRelationships($data);
-
             // Prepare schedule data
             $scheduleData = $this->prepareScheduleData($data);
 
@@ -275,24 +272,25 @@ class ScheduleService
      */
     private function prepareScheduleData(array $data): array
     {
-        $preparedData = [
-            'schedule_type' => $data['schedule_type'] ?? 'manual',
-            'enabled' => $data['enabled'] ?? true,
-            'timezone' => $data['timezone'] ?? 'Asia/Jakarta',
-            'max_retries' => $data['max_retries'] ?? 3,
-            'retry_delay' => $data['retry_delay'] ?? 5,
-            'retry_delay_unit' => $data['retry_delay_unit'] ?? 'minutes',
-            'status' => $data['status'] ?? 'active',
-            'api_source_id' => $data['api_source_id'] ?? null,
-            'api_request_id' => $data['api_request_id'] ?? null,
-            'api_extract_id' => $data['api_extract_id'] ?? null,
-            'destination_id' => $data['destination_id'] ?? null,
-        ];
+        $preparedData = [];
+
+        // Only set keys that are present to support partial updates
+        if (array_key_exists('schedule_type', $data)) $preparedData['schedule_type'] = $data['schedule_type'];
+        if (array_key_exists('enabled', $data)) $preparedData['enabled'] = $data['enabled'];
+        if (array_key_exists('timezone', $data)) $preparedData['timezone'] = $data['timezone'];
+        if (array_key_exists('max_retries', $data)) $preparedData['max_retries'] = $data['max_retries'];
+        if (array_key_exists('retry_delay', $data)) $preparedData['retry_delay'] = $data['retry_delay'];
+        if (array_key_exists('retry_delay_unit', $data)) $preparedData['retry_delay_unit'] = $data['retry_delay_unit'];
+        if (array_key_exists('status', $data)) $preparedData['status'] = $data['status'];
+        if (array_key_exists('api_source_id', $data)) $preparedData['api_source_id'] = $data['api_source_id'];
+        if (array_key_exists('api_request_id', $data)) $preparedData['api_request_id'] = $data['api_request_id'];
+        if (array_key_exists('api_extract_id', $data)) $preparedData['api_extract_id'] = $data['api_extract_id'];
+        if (array_key_exists('destination_id', $data)) $preparedData['destination_id'] = $data['destination_id'];
 
         // Add cron-specific data if schedule type is cron
-        if ($preparedData['schedule_type'] === 'cron') {
-            $preparedData['cron_expression'] = $data['cron_expression'] ?? null;
-            $preparedData['cron_description'] = $data['cron_description'] ?? null;
+        if ((isset($preparedData['schedule_type']) && $preparedData['schedule_type'] === 'cron') || ($data['schedule_type'] ?? null) === 'cron') {
+            if (array_key_exists('cron_expression', $data)) $preparedData['cron_expression'] = $data['cron_expression'];
+            if (array_key_exists('cron_description', $data)) $preparedData['cron_description'] = $data['cron_description'];
         }
 
         return $preparedData;

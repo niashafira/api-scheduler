@@ -1,151 +1,162 @@
-import React from 'react';
-import { Typography, Table, Tag, Space, Button, Tooltip } from 'antd';
+import React, { useEffect, useState } from 'react';
+import { Typography, Table, Tag, Space, Button, Tooltip, message, Spin } from 'antd';
 import { 
   PlayCircleOutlined, 
   PauseCircleOutlined, 
-  EditOutlined, 
-  DeleteOutlined, 
-  PlusOutlined,
-  HistoryOutlined
+  PlusOutlined
 } from '@ant-design/icons';
+import { useNavigate } from 'react-router-dom';
+import scheduleApi, { ScheduleResponse } from '../services/scheduleApi';
 
 const { Title } = Typography;
 
-// Mock data interface
-interface ScheduleData {
-  id: string;
-  name: string;
-  source: string;
-  destination: string;
-  schedule: string;
-  status: 'active' | 'paused';
-  lastRun: string | null;
-  nextRun: string | null;
-}
-
-// Mock data for demonstration
-const mockData: ScheduleData[] = [
-  {
-    id: '1',
-    name: 'Weather Data Sync',
-    source: 'Weather API',
-    destination: 'weather_data',
-    schedule: '*/30 * * * *',
-    status: 'active',
-    lastRun: '2023-08-15T10:30:00',
-    nextRun: '2023-08-15T11:00:00',
-  },
-  {
-    id: '2',
-    name: 'GitHub Issues Import',
-    source: 'GitHub API',
-    destination: 'github_issues',
-    schedule: '0 */2 * * *',
-    status: 'active',
-    lastRun: '2023-08-15T08:00:00',
-    nextRun: '2023-08-15T10:00:00',
-  },
-  {
-    id: '3',
-    name: 'Product Catalog Update',
-    source: 'E-commerce Product API',
-    destination: 'products',
-    schedule: '0 0 * * *',
-    status: 'paused',
-    lastRun: '2023-08-14T00:00:00',
-    nextRun: null,
-  },
-  {
-    id: '4',
-    name: 'Analytics Data Import',
-    source: 'Analytics API',
-    destination: 'analytics_data',
-    schedule: '0 */6 * * *',
-    status: 'active',
-    lastRun: '2023-08-15T06:00:00',
-    nextRun: '2023-08-15T12:00:00',
-  },
-];
+const formatDateTime = (iso?: string | null) => (iso ? new Date(iso).toLocaleString() : null);
 
 const Schedules: React.FC = () => {
+  const navigate = useNavigate();
+  const [loading, setLoading] = useState<boolean>(true);
+  const [rows, setRows] = useState<ScheduleResponse[]>([]);
+
+  const fetchSchedules = async (): Promise<void> => {
+    try {
+      setLoading(true);
+      const res = await scheduleApi.getAllSchedules();
+      if (res.success) {
+        setRows(res.data || []);
+      } else {
+        message.error(res.message || 'Failed to load schedules');
+      }
+    } catch (e) {
+      console.error('Failed to fetch schedules:', e);
+      message.error('Failed to load schedules');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchSchedules();
+  }, []);
+
+  const toHumanCron = (expr?: string): string | null => {
+    if (!expr) return null;
+    const parts = expr.trim().split(/\s+/);
+    if (parts.length !== 6) return expr;
+    const [sec, min, hour, day, month, weekday] = parts;
+
+    // Every N minutes
+    if ((sec === '0' || sec === '*') && /^\*\/(\d+)$/.test(min) && hour === '*' && day === '*' && month === '*' && weekday === '*') {
+      const n = min.split('/')[1];
+      return `Every ${n} minute${n === '1' ? '' : 's'}`;
+    }
+    // Every hour
+    if ((sec === '0' || sec === '*') && (min === '0' || min === '*') && hour === '*' && day === '*' && month === '*' && weekday === '*') {
+      if (min === '0') return 'Every hour';
+    }
+    // Every N hours
+    if ((sec === '0' || sec === '*') && (min === '0' || min === '*') && /^\*\/(\d+)$/.test(hour) && day === '*' && month === '*' && weekday === '*') {
+      const n = hour.split('/')[1];
+      return `Every ${n} hour${n === '1' ? '' : 's'}`;
+    }
+    // Daily at HH:MM
+    if ((sec === '0' || sec === '*') && /^\d+$/.test(min) && /^\d+$/.test(hour) && day === '*' && month === '*' && weekday === '*') {
+      const hh = hour.padStart(2, '0');
+      const mm = min.padStart(2, '0');
+      return `Daily at ${hh}:${mm}`;
+    }
+    // Weekly on weekday at HH:MM (weekday 0-6, 0=Sun per many crons)
+    if ((sec === '0' || sec === '*') && /^\d+$/.test(min) && /^\d+$/.test(hour) && day === '*' && month === '*' && /^\d$/.test(weekday)) {
+      const days: Record<string, string> = { '0': 'Sunday', '1': 'Monday', '2': 'Tuesday', '3': 'Wednesday', '4': 'Thursday', '5': 'Friday', '6': 'Saturday' };
+      const hh = hour.padStart(2, '0');
+      const mm = min.padStart(2, '0');
+      return `Every ${days[weekday]} at ${hh}:${mm}`;
+    }
+    // Monthly on day X at HH:MM
+    if ((sec === '0' || sec === '*') && /^\d+$/.test(min) && /^\d+$/.test(hour) && /^\d+$/.test(day) && month === '*' && weekday === '*') {
+      const hh = hour.padStart(2, '0');
+      const mm = min.padStart(2, '0');
+      return `Monthly on day ${day} at ${hh}:${mm}`;
+    }
+    return expr;
+  };
+
+  const pauseOrResume = async (record: ScheduleResponse): Promise<void> => {
+    try {
+      const updated = await scheduleApi.updateSchedule(record.id, { enabled: !record.enabled } as any);
+      if (updated.success) {
+        message.success(record.enabled ? 'Schedule paused' : 'Schedule resumed');
+        fetchSchedules();
+      } else {
+        message.error(updated.message || 'Failed to update schedule');
+      }
+    } catch (e) {
+      console.error('Failed to update schedule:', e);
+      message.error('Failed to update schedule');
+    }
+  };
+
+  // deleteSchedule removed per UI simplification
+
   const columns = [
     {
       title: 'Name',
-      dataIndex: 'name',
       key: 'name',
-      render: (text: string) => <a>{text}</a>,
-    },
-    {
-      title: 'Source',
-      dataIndex: 'source',
-      key: 'source',
+      render: (_: any, record: ScheduleResponse) => {
+        const reqName = (record as any).apiRequest?.name;
+        const name = reqName || (record.apiRequestId ? `Request #${record.apiRequestId}`
+          : record.apiSourceId ? `Source #${record.apiSourceId}`
+          : record.destinationId ? `Destination #${record.destinationId}`
+          : `Schedule #${record.id}`);
+        return <span>{name}</span>;
+      },
     },
     {
       title: 'Destination',
-      dataIndex: 'destination',
       key: 'destination',
+      render: (_: any, record: ScheduleResponse) => record.destinationId ?? '-',
     },
     {
       title: 'Schedule',
-      dataIndex: 'schedule',
       key: 'schedule',
-      render: (schedule: string) => <code>{schedule}</code>,
+      render: (_: any, record: ScheduleResponse) => (
+        <code>{record.scheduleType === 'cron' ? (record.cronDescription || toHumanCron(record.cronExpression) || 'CRON') : 'Manual'}</code>
+      ),
     },
     {
       title: 'Status',
-      dataIndex: 'status',
       key: 'status',
-      render: (status: 'active' | 'paused') => (
-        <Tag color={status === 'active' ? 'success' : 'warning'}>
-          {status.toUpperCase()}
-        </Tag>
-      ),
+      render: (_: any, record: ScheduleResponse) => {
+        const isPaused = !record.enabled;
+        const color = isPaused ? 'warning' : 'success';
+        const text = isPaused ? 'PAUSED' : 'ACTIVE';
+        return <Tag color={color}>{text}</Tag>;
+      },
       filters: [
         { text: 'Active', value: 'active' },
         { text: 'Paused', value: 'paused' },
       ],
-      onFilter: (value: any, record: ScheduleData) => record.status === value,
+      onFilter: (value: any, record: ScheduleResponse) => (value === 'active' ? record.enabled : !record.enabled),
     },
     {
       title: 'Last Run',
-      dataIndex: 'lastRun',
       key: 'lastRun',
-      render: (date: string | null) => date ? new Date(date).toLocaleString() : 'Never',
+      render: (_: any, record: ScheduleResponse) => formatDateTime((record as any).lastExecutedAt) || 'Never',
     },
     {
       title: 'Next Run',
-      dataIndex: 'nextRun',
       key: 'nextRun',
-      render: (date: string | null) => date ? new Date(date).toLocaleString() : 'Not scheduled',
+      render: (_: any, record: ScheduleResponse) => formatDateTime((record as any).nextExecutionAt) || 'Not scheduled',
     },
     {
       title: 'Actions',
       key: 'actions',
-      render: (_: any, record: ScheduleData) => (
+      render: (_: any, record: ScheduleResponse) => (
         <Space size="middle">
-          <Tooltip title={record.status === 'active' ? 'Pause' : 'Activate'}>
+          <Tooltip title={record.enabled ? 'Pause' : 'Activate'}>
             <Button 
               type="text" 
-              icon={record.status === 'active' ? <PauseCircleOutlined /> : <PlayCircleOutlined />} 
-            />
-          </Tooltip>
-          <Tooltip title="View History">
-            <Button 
-              type="text" 
-              icon={<HistoryOutlined />} 
-            />
-          </Tooltip>
-          <Tooltip title="Edit">
-            <Button 
-              type="text" 
-              icon={<EditOutlined />} 
-            />
-          </Tooltip>
-          <Tooltip title="Delete">
-            <Button 
-              type="text" 
-              danger 
-              icon={<DeleteOutlined />} 
+              icon={record.enabled ? <PauseCircleOutlined /> : <PlayCircleOutlined />} 
+              onClick={() => pauseOrResume(record)}
             />
           </Tooltip>
         </Space>
@@ -160,16 +171,22 @@ const Schedules: React.FC = () => {
         <Button 
           type="primary" 
           icon={<PlusOutlined />} 
+          onClick={() => navigate('/sources/new')}
         >
           Create Schedule
         </Button>
       </div>
-      
-      <Table 
-        columns={columns} 
-        dataSource={mockData}
-        rowKey="id"
-      />
+      {loading ? (
+        <div style={{ textAlign: 'center', padding: '40px' }}>
+          <Spin size="large" />
+        </div>
+      ) : (
+        <Table 
+          columns={columns} 
+          dataSource={rows}
+          rowKey="id"
+        />
+      )}
     </div>
   );
 };

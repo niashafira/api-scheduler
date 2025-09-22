@@ -10,8 +10,8 @@ import {
   ReloadOutlined
 } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
-import apiSourceApi from '../../services/apiSourceApi';
-import { ApiSource, TableColumnConfig, FilterOption } from '../../types';
+import apiRequestApi from '../../services/apiRequestApi';
+import { ApiRequest, TableColumnConfig, FilterOption } from '../../types';
 
 const { Title } = Typography;
 
@@ -20,27 +20,27 @@ const SourcesTable: React.FC = () => {
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [deleteModalVisible, setDeleteModalVisible] = useState<boolean>(false);
-  const [sourceToDelete, setSourceToDelete] = useState<ApiSource | null>(null);
-  const [dataSource, setDataSource] = useState<ApiSource[]>([]);
+  const [sourceToDelete, setSourceToDelete] = useState<ApiRequest | null>(null);
+  const [dataSource, setDataSource] = useState<ApiRequest[]>([]);
   const [fetching, setFetching] = useState<boolean>(true);
 
-  // Fetch API sources on component mount
+  // Fetch API requests on component mount
   useEffect(() => {
-    fetchApiSources();
+    fetchApiRequests();
   }, []);
 
-  const fetchApiSources = async (): Promise<void> => {
+  const fetchApiRequests = async (): Promise<void> => {
     try {
       setFetching(true);
-      const response = await apiSourceApi.getAllApiSources();
+      const response = await apiRequestApi.getAllApiRequests();
       if (response.success) {
         setDataSource(response.data || []);
       } else {
-        message.error('Failed to fetch API sources: ' + response.message);
+        message.error('Failed to fetch API requests: ' + response.message);
       }
     } catch (error) {
-      console.error('Error fetching API sources:', error);
-      message.error('Failed to fetch API sources: ' + (error as Error).message);
+      console.error('Error fetching API requests:', error);
+      message.error('Failed to fetch API requests: ' + (error as Error).message);
     } finally {
       setFetching(false);
     }
@@ -50,11 +50,12 @@ const SourcesTable: React.FC = () => {
     navigate('/sources/new');
   };
 
-  const handleEditSource = (record: ApiSource): void => {
-    navigate(`/sources/edit/${record.id}`);
+  const handleEditSource = (record: ApiRequest): void => {
+    // Navigate to edit wizard for the associated source
+    navigate(`/sources/edit/${record.apiSourceId}`);
   };
 
-  const handleDeleteClick = (record: ApiSource): void => {
+  const handleDeleteClick = (record: ApiRequest): void => {
     setSourceToDelete(record);
     setDeleteModalVisible(true);
   };
@@ -64,16 +65,16 @@ const SourcesTable: React.FC = () => {
 
     try {
       setLoading(true);
-      const response = await apiSourceApi.deleteApiSource(sourceToDelete.id);
+      const response = await apiRequestApi.deleteApiRequest(sourceToDelete.id);
       if (response.success) {
-        message.success('API source deleted successfully');
+        message.success('API request deleted successfully');
         setDataSource(dataSource.filter(item => item.id !== sourceToDelete.id));
       } else {
-        message.error('Failed to delete API source: ' + response.message);
+        message.error('Failed to delete API request: ' + response.message);
       }
     } catch (error) {
-      console.error('Error deleting API source:', error);
-      message.error('Failed to delete API source: ' + (error as Error).message);
+      console.error('Error deleting API request:', error);
+      message.error('Failed to delete API request: ' + (error as Error).message);
     } finally {
       setLoading(false);
       setDeleteModalVisible(false);
@@ -86,23 +87,23 @@ const SourcesTable: React.FC = () => {
     setSourceToDelete(null);
   };
 
-  const handleMarkAsUsed = async (record: ApiSource): Promise<void> => {
+  const handleMarkAsUsed = async (record: ApiRequest): Promise<void> => {
     try {
-      const response = await apiSourceApi.markApiSourceAsUsed(record.id);
+      const response = await apiRequestApi.markApiRequestAsExecuted(record.id);
       if (response.success) {
-        message.success('API source marked as used');
-        fetchApiSources(); // Refresh the data
+        message.success('API request marked as executed');
+        fetchApiRequests(); // Refresh the data
       } else {
-        message.error('Failed to mark API source as used: ' + response.message);
+        message.error('Failed to mark API request as executed: ' + response.message);
       }
     } catch (error) {
-      console.error('Error marking API source as used:', error);
-      message.error('Failed to mark API source as used: ' + (error as Error).message);
+      console.error('Error marking API request as executed:', error);
+      message.error('Failed to mark API request as executed: ' + (error as Error).message);
     }
   };
 
   const handleRefresh = (): void => {
-    fetchApiSources();
+    fetchApiRequests();
   };
 
   const rowSelection = {
@@ -123,50 +124,56 @@ const SourcesTable: React.FC = () => {
     }
   };
 
-  const getAuthTypeTag = (authType: string) => {
+  const getMethodTag = (method: string) => {
     const colors: Record<string, string> = {
-      'none': 'default',
-      'basic': 'blue',
-      'bearer': 'green',
-      'apiKey': 'orange',
-      'token': 'purple',
-      'oauth2': 'cyan'
+      'GET': 'blue',
+      'POST': 'green',
+      'PUT': 'orange',
+      'PATCH': 'purple',
+      'DELETE': 'red',
+      'HEAD': 'default',
+      'OPTIONS': 'default'
     };
-    return <Tag color={colors[authType] || 'default'}>{authType.toUpperCase()}</Tag>;
+    return <Tag color={colors[method] || 'default'}>{method}</Tag>;
   };
 
   const columns: TableColumnConfig[] = [
     {
-      title: 'Name',
+      title: 'Request',
       dataIndex: 'name',
       key: 'name',
-      render: (text: string, record: ApiSource) => (
-        <Space>
-          <ApiOutlined />
-          <a onClick={() => handleEditSource(record)}>{text}</a>
-        </Space>
+      render: (text: string, record: ApiRequest) => (
+        <div style={{ textAlign: 'left' }}>
+          <Space align="start">
+            <ApiOutlined />
+            <div style={{ whiteSpace: 'normal', wordBreak: 'break-word', lineHeight: 1.4 }}>
+              <Button type="link" onClick={() => handleEditSource(record)} style={{ padding: 0, height: 'auto', whiteSpace: 'normal' }}>
+                {text}
+              </Button>
+            </div>
+          </Space>
+        </div>
       ),
     },
     {
-      title: 'Base URL',
-      dataIndex: 'baseUrl',
-      key: 'baseUrl',
-      ellipsis: true,
+      title: 'Source',
+      dataIndex: 'apiSource',
+      key: 'apiSource',
+      render: (_: any, record: ApiRequest) => record.apiSource?.name || record.apiSourceId,
     },
     {
-      title: 'Auth Type',
-      dataIndex: 'authType',
-      key: 'authType',
-      render: (authType: string) => getAuthTypeTag(authType),
+      title: 'Method',
+      dataIndex: 'method',
+      key: 'method',
+      render: (method: string) => getMethodTag(method),
       filters: [
-        { text: 'None', value: 'none' },
-        { text: 'Basic', value: 'basic' },
-        { text: 'Bearer', value: 'bearer' },
-        { text: 'API Key', value: 'apiKey' },
-        { text: 'Token', value: 'token' },
-        { text: 'OAuth2', value: 'oauth2' },
+        { text: 'GET', value: 'GET' },
+        { text: 'POST', value: 'POST' },
+        { text: 'PUT', value: 'PUT' },
+        { text: 'PATCH', value: 'PATCH' },
+        { text: 'DELETE', value: 'DELETE' },
       ] as FilterOption[],
-      onFilter: (value: string, record: ApiSource) => record.authType === value,
+      onFilter: (value: string, record: ApiRequest) => record.method === value,
     },
     {
       title: 'Status',
@@ -177,29 +184,14 @@ const SourcesTable: React.FC = () => {
         { text: 'Active', value: 'active' },
         { text: 'Inactive', value: 'inactive' },
       ] as FilterOption[],
-      onFilter: (value: string, record: ApiSource) => record.status === value,
-    },
-    {
-      title: 'Last Used',
-      dataIndex: 'lastUsedAt',
-      key: 'lastUsedAt',
-      render: (date: string | null) => {
-        if (!date) return 'Never';
-        return new Date(date).toLocaleString();
-      },
-      sorter: (a: ApiSource, b: ApiSource) => {
-        if (!a.lastUsedAt && !b.lastUsedAt) return 0;
-        if (!a.lastUsedAt) return 1;
-        if (!b.lastUsedAt) return -1;
-        return new Date(a.lastUsedAt).getTime() - new Date(b.lastUsedAt).getTime();
-      },
+      onFilter: (value: string, record: ApiRequest) => record.status === value,
     },
     {
       title: 'Created',
       dataIndex: 'createdAt',
       key: 'createdAt',
       render: (date: string) => new Date(date).toLocaleString(),
-      sorter: (a: ApiSource, b: ApiSource) => {
+      sorter: (a: ApiRequest, b: ApiRequest) => {
         if (!a.createdAt && !b.createdAt) return 0;
         if (!a.createdAt) return 1;
         if (!b.createdAt) return -1;
@@ -209,7 +201,7 @@ const SourcesTable: React.FC = () => {
     {
       title: 'Actions',
       key: 'actions',
-      render: (_: any, record: ApiSource) => (
+      render: (_: any, record: ApiRequest) => (
         <Space size="middle">
           <Tooltip title="Edit">
             <Button 
@@ -218,7 +210,7 @@ const SourcesTable: React.FC = () => {
               onClick={() => handleEditSource(record)}
             />
           </Tooltip>
-          <Tooltip title="Mark as Used">
+          <Tooltip title="Mark as Executed">
             <Button 
               type="text" 
               icon={<CheckCircleOutlined />} 
@@ -262,7 +254,7 @@ const SourcesTable: React.FC = () => {
             icon={<PlusOutlined />} 
             onClick={handleCreateSource}
           >
-            Create Source
+            Create Configuration
           </Button>
         </Space>
       </div>
@@ -282,7 +274,7 @@ const SourcesTable: React.FC = () => {
       />
 
       <Modal
-        title="Delete API Source"
+        title="Delete API Request"
         open={deleteModalVisible}
         onOk={handleDeleteConfirm}
         onCancel={handleDeleteCancel}
@@ -290,7 +282,7 @@ const SourcesTable: React.FC = () => {
         okText="Delete"
         okButtonProps={{ danger: true }}
       >
-        <p>Are you sure you want to delete the API source "{sourceToDelete?.name}"?</p>
+        <p>Are you sure you want to delete the API request "{sourceToDelete?.name}"?</p>
         <p>This action cannot be undone.</p>
       </Modal>
     </div>

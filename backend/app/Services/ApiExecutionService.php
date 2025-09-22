@@ -412,13 +412,36 @@ class ApiExecutionService
     private function calculateNextExecution(Schedule $schedule): ?\Carbon\Carbon
     {
         try {
-            $cron = \Cron\CronExpression::factory($schedule->cron_expression);
-            $nextRun = $cron->getNextRunDate();
+            $expression = $this->normalizeCronExpression($schedule->cron_expression);
+            $cron = \Cron\CronExpression::factory($expression);
+            $now = \Carbon\Carbon::now($schedule->timezone ?: config('app.timezone'));
+            $nextRun = $cron->getNextRunDate($now);
             return \Carbon\Carbon::instance($nextRun);
         } catch (\Exception $e) {
-            Log::error("Error calculating next execution for schedule ID {$schedule->id}: {$e->getMessage()}");
+            Log::error("Error calculating next execution for schedule ID {$schedule->id}: {$e->getMessage()} (expr: {$schedule->cron_expression})");
             return null;
         }
+    }
+
+    /**
+     * Convert 6-field cron (second minute hour day month weekday) to 5-field (minute hour day month weekday)
+     * when the seconds field is 0, to support environments where seconds are not recognized.
+     */
+    private function normalizeCronExpression(?string $expr): string
+    {
+        if (!$expr) {
+            return '* * * * *';
+        }
+        $parts = preg_split('/\s+/', trim($expr));
+        if (!$parts) {
+            return $expr;
+        }
+        if (count($parts) === 6) {
+            if ($parts[0] === '0') {
+                return implode(' ', array_slice($parts, 1));
+            }
+        }
+        return $expr;
     }
 
     /**

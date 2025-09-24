@@ -89,7 +89,7 @@ class ApiExecutionService
      */
     private function executeApiRequest(Schedule $schedule): array
     {
-        $apiRequest = $schedule->apiRequest;
+        $apiRequest = $schedule->apiRequest()->first();
         if (!$apiRequest) {
             return ['success' => false, 'message' => 'API Request not found'];
         }
@@ -100,13 +100,75 @@ class ApiExecutionService
             $body = $this->buildBody($apiRequest);
 
             // Add authentication headers if needed
-            $authHeaders = $this->getAuthenticationHeaders($schedule->apiSource);
+            $apiSource = $schedule->apiSource()->first();
+            if ($apiSource) {
+                Log::info(
+                    'Detected ApiSource for schedule ' . $schedule->id .
+                    ' {id=' . $apiSource->id . ', auth_type=' . ($apiSource->auth_type ?? 'null') .
+                    ', api_key_location=' . ($apiSource->api_key_location ?? 'null') .
+                    ', api_key_name=' . ($apiSource->api_key_name ?? 'null') .
+                    ', token_config_id=' . ($apiSource->token_config_id ?? 'null') . '}'
+                );
+            } else {
+                Log::warning('No ApiSource found for schedule ID: ' . $schedule->id);
+            }
+            $authHeaders = $this->getAuthenticationHeaders($apiSource);
             $headers = array_merge($headers, $authHeaders);
 
-            Log::info("Executing API request to: {$url}");
-            Log::info("Request headers: " . json_encode($headers));
+            // Ensure token is present either in header or query as configured
+            $location = $apiSource && $apiSource->api_key_location ? strtolower($apiSource->api_key_location) : 'header';
+            $isTokenAuth = $apiSource && (($apiSource->auth_type === 'token') || (!empty($apiSource->token_config_id)));
+            if ($apiSource && $isTokenAuth) {
+                $paramOrHeaderName = $apiSource->api_key_name ?: ($location === 'header' ? 'Authorization' : 'access_token');
 
-            $response = Http::withHeaders($headers)
+                if ($location === 'query') {
+                    try {
+                        $tokenConfig = $apiSource->tokenConfig;
+                        if (!$tokenConfig) {
+                            Log::warning("Token config not found for API source ID: {$apiSource->id} while appending query token");
+                            return ['success' => false, 'message' => 'Token config not found'];
+                        }
+                        $token = $this->getValidToken($tokenConfig);
+                        if (!$token) {
+                            Log::error("No valid token available for API source ID: {$apiSource->id} (query)");
+                            return ['success' => false, 'message' => 'No valid token available'];
+                        }
+                        $hasQuery = (parse_url($url, PHP_URL_QUERY) !== null);
+                        $separator = $hasQuery ? '&' : '?';
+                        $url .= $separator . urlencode($paramOrHeaderName) . '=' . urlencode($token);
+                        Log::info("Appended query token for API source ID: {$apiSource->id} using param: {$paramOrHeaderName}");
+                    } catch (\Exception $e) {
+                        Log::error("Error appending token as query parameter for API source ID {$apiSource->id}: {$e->getMessage()}");
+                        return ['success' => false, 'message' => 'Failed to append token to URL'];
+                    }
+                } elseif ($location === 'header') {
+                    if (!array_key_exists($paramOrHeaderName, $headers)) {
+                        $tokenConfig = $apiSource->tokenConfig;
+                        if (!$tokenConfig) {
+                            Log::warning("Token config not found for API source ID: {$apiSource->id} while setting header token");
+                            return ['success' => false, 'message' => 'Token config not found'];
+                        }
+                        $token = $this->getValidToken($tokenConfig);
+                        if (!$token) {
+                            Log::error("No valid token available for API source ID: {$apiSource->id} (header)");
+                            return ['success' => false, 'message' => 'No valid token available'];
+                        }
+                        $headers[$paramOrHeaderName] = $paramOrHeaderName === 'Authorization' ? ("Bearer {$token}") : $token;
+                        Log::info("Set header token for API source ID: {$apiSource->id} using header: {$paramOrHeaderName}");
+                    }
+                }
+            }
+
+            Log::info("Executing API request to: " . $this->maskUrlToken($url, $apiSource ? ($apiSource->api_key_name ?: 'access_token') : 'access_token'));
+            Log::info("Request headers: " . json_encode($this->maskHeaders($headers)));
+
+            $client = Http::withHeaders($headers);
+            if (!config('app.http_ssl_verify', true)) {
+                $client = $client->withoutVerifying();
+                Log::warning('SSL verification disabled for HTTP client');
+            }
+
+            $response = $client
                 ->timeout(30)
                 ->send($apiRequest->method, $url, $body);
 
@@ -149,7 +211,7 @@ class ApiExecutionService
      */
     private function extractData(Schedule $schedule, $responseData): array
     {
-        $apiExtract = $schedule->apiExtract;
+        $apiExtract = $schedule->apiExtract()->first();
         if (!$apiExtract) {
             return ['success' => false, 'message' => 'API Extract not found'];
         }
@@ -184,7 +246,7 @@ class ApiExecutionService
      */
     private function storeData(Schedule $schedule, $data): array
     {
-        $destination = $schedule->destination;
+        $destination = $schedule->destination()->first();
         if (!$destination) {
             return ['success' => false, 'message' => 'Destination not found'];
         }
@@ -452,12 +514,13 @@ class ApiExecutionService
      */
     private function getAuthenticationHeaders($apiSource): array
     {
+        Log::info("Start getAuthenticationHeaders: " . ($apiSource ? ($apiSource->auth_type ?? 'none') : 'null'));
         if (!$apiSource || $apiSource->auth_type !== 'token') {
             return [];
         }
 
         try {
-            $tokenConfig = $apiSource->tokenConfig;
+            $tokenConfig = $apiSource->tokenConfig()->first();
             if (!$tokenConfig) {
                 Log::warning("Token config not found for API source ID: {$apiSource->id}");
                 return [];
@@ -473,7 +536,9 @@ class ApiExecutionService
             // Return appropriate header based on token location
             if ($apiSource->api_key_location === 'header') {
                 $headerName = $apiSource->api_key_name ?: 'Authorization';
-                return [$headerName => "Bearer {$token}"];
+                $value = $headerName === 'Authorization' ? ("Bearer {$token}") : $token;
+                Log::info("Using header auth with header: {$headerName}");
+                return [$headerName => $value];
             } elseif ($apiSource->api_key_location === 'query') {
                 // For query parameters, we'll handle this in the URL building
                 return [];
@@ -499,16 +564,16 @@ class ApiExecutionService
             $cacheKey = "token_{$tokenConfig->id}";
             $cachedToken = cache()->get($cacheKey);
 
-            if ($cachedToken && $this->isTokenValid($cachedToken, $tokenConfig)) {
-                return $cachedToken;
+            // Always request a fresh token per user request (ignore cache)
+            if ($cachedToken) {
+                Log::info("Token cache ignored for token_config_id={$tokenConfig->id}, requesting fresh token");
+            } else {
+                Log::info("No cached token for token_config_id={$tokenConfig->id}, requesting fresh token");
             }
-
             // Get new token
             $token = $this->requestNewToken($tokenConfig);
             if ($token) {
-                // Cache the token for its expiration time
-                $expiresIn = $tokenConfig->expires_in ?: 3600; // Default 1 hour
-                cache()->put($cacheKey, $token, now()->addSeconds($expiresIn));
+                // Do not cache to ensure fresh token each request
                 return $token;
             }
 
@@ -554,25 +619,39 @@ class ApiExecutionService
                 $body = ['json' => json_decode($tokenConfig->body, true)];
             }
 
-            Log::info("Requesting new token from: {$tokenConfig->endpoint}");
+            Log::info("Requesting new token from: {$tokenConfig->endpoint} using method: {$tokenConfig->method}");
 
-            $response = Http::withHeaders($headers)
+            $client = Http::withHeaders($headers);
+            if (!config('app.http_ssl_verify', true)) {
+                $client = $client->withoutVerifying();
+                Log::warning('SSL verification disabled for token request');
+            }
+
+            $response = $client
                 ->timeout(30)
                 ->send($tokenConfig->method, $tokenConfig->endpoint, $body);
 
             if ($response->successful()) {
                 $responseData = $response->json();
+                if (!is_array($responseData)) {
+                    Log::warning('Token response is not JSON, attempting to parse body');
+                    $responseData = json_decode((string) $response->body(), true) ?: [];
+                }
                 $token = $this->extractTokenFromResponse($responseData, $tokenConfig);
 
                 if ($token) {
-                    Log::info("Successfully obtained new token");
+                    Log::info("Successfully obtained new token (masked length=" . strlen($token) . ")");
                     return $token;
                 } else {
-                    Log::error("Token not found in response");
+                    Log::error("Token not found in response at path: {$tokenConfig->token_path}");
+                    $topKeys = is_array($responseData) ? implode(',', array_slice(array_keys($responseData), 0, 5)) : '';
+                    Log::info("Top-level response keys: {$topKeys}");
                     return null;
                 }
             } else {
                 Log::error("Token request failed with status: {$response->status()}");
+                $snippet = substr((string) $response->body(), 0, 300);
+                Log::info("Token request response snippet: " . $snippet);
                 return null;
             }
         } catch (\Exception $e) {
@@ -611,5 +690,27 @@ class ApiExecutionService
             Log::error("Error extracting token from response: {$e->getMessage()}");
             return null;
         }
+    }
+
+    private function maskHeaders(array $headers): array
+    {
+        $masked = [];
+        foreach ($headers as $key => $value) {
+            if (strtolower($key) === 'authorization') {
+                $masked[$key] = 'Bearer ***';
+            } else {
+                $masked[$key] = $value;
+            }
+        }
+        return $masked;
+    }
+
+    private function maskUrlToken(string $url, string $paramName): string
+    {
+        if (!$paramName) {
+            return $url;
+        }
+        $pattern = '/([?&]'.preg_quote($paramName, '/').'=)([^&#]*)/i';
+        return preg_replace($pattern, '$1***', $url) ?: $url;
     }
 }

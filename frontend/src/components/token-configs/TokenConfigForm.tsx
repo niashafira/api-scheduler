@@ -131,9 +131,19 @@ const TokenConfigForm: React.FC<TokenConfigFormProps> = ({ initialData, onSubmit
   };
 
   const handleSubmit = (values: any): void => {
+    const filteredHeaders = headers.filter(h => h.key && h.value);
+    const hasContentType = filteredHeaders.some(h => h.key.toLowerCase() === 'content-type');
+    const desiredContentType = (values.bodyFormat === 'form') 
+      ? 'application/x-www-form-urlencoded' 
+      : 'application/json';
+
+    const finalHeaders = hasContentType 
+      ? filteredHeaders 
+      : [...filteredHeaders, { key: 'Content-Type', value: desiredContentType }];
+
     const formData = {
       ...values,
-      headers: headers.filter(h => h.key && h.value),
+      headers: finalHeaders,
     };
     console.log('Token config form data:', formData);
     onSubmit(formData);

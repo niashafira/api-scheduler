@@ -1,4 +1,4 @@
-import { ApiResponse, TokenConfig, TokenTestConfig, TokenTestResponse, ApiTestResponse, Header } from '../types';
+import { TokenTestConfig, TokenTestResponse, ApiTestResponse, Header } from '../types';
 
 // Request options interface
 interface RequestOptions extends RequestInit {
@@ -6,13 +6,7 @@ interface RequestOptions extends RequestInit {
 }
 
 // Generic API response interface
-interface GenericApiResponse {
-  status: number;
-  statusText: string;
-  headers: Record<string, string>;
-  data: any;
-  ok: boolean;
-}
+// (unused) GenericApiResponse type removed
 
 // Token data interface
 interface TokenData {
@@ -60,67 +54,22 @@ export const apiService = {
   },
 
   async testTokenAcquisition(tokenConfig: TokenTestConfig): Promise<TokenTestResponse> {
-    const { endpoint, method, headers, body, tokenPath, expiresInPath, refreshTokenPath } = tokenConfig;
-    
-    if (!endpoint) {
-      throw new Error('Token endpoint is required');
+    // Call backend proxy to bypass CORS
+    const apiBase = process.env.REACT_APP_API_URL || 'http://localhost:8000/api';
+    const res = await fetch(`${apiBase}/token-configs/test`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(tokenConfig),
+    });
+    if (!res.ok) {
+      const text = await res.text();
+      throw new Error(`Proxy error ${res.status}: ${text}`);
     }
-    if (!tokenPath) {
-      throw new Error('Token field path is required');
+    const data = await res.json();
+    if (!data.success) {
+      throw new Error(data.message || 'Token acquisition failed');
     }
-
-    // Prepare headers for the request
-    const requestHeaders: Record<string, string> = {
-      'Content-Type': 'application/json',
-    };
-    
-    // Add custom headers
-    if (headers) {
-      headers.forEach((header: Header) => {
-        if (header.key && header.value) {
-          requestHeaders[header.key] = header.value;
-        }
-      });
-    }
-
-    // Parse body if it's a JSON string
-    let requestBody: any = undefined;
-    if (body) {
-      try {
-        requestBody = JSON.parse(body);
-      } catch (e) {
-        requestBody = body;
-      }
-    }
-
-    const options: RequestOptions = {
-      method: method || 'POST',
-      headers: requestHeaders,
-      body: requestBody ? JSON.stringify(requestBody) : undefined,
-    };
-
-    const response = await fetch(endpoint, options);
-
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-    }
-
-    const responseData = await response.json();
-    
-    // Extract token using the specified path
-    const tokenValue = jsonPath.getValue(responseData, tokenPath);
-    
-    if (!tokenValue) {
-      throw new Error(`No valid token found at path: ${tokenPath}`);
-    }
-
-    return {
-      success: true,
-      token: tokenValue,
-      expiresIn: expiresInPath ? jsonPath.getValue(responseData, expiresInPath) : null,
-      refreshToken: refreshTokenPath ? jsonPath.getValue(responseData, refreshTokenPath) : null,
-      fullResponse: responseData
-    };
+    return data as TokenTestResponse;
   },
 
   async testRegularConnection(baseUrl: string, headers: Header[] = []): Promise<any> {

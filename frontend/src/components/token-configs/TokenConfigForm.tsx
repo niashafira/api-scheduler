@@ -100,6 +100,7 @@ const TokenConfigForm: React.FC<TokenConfigFormProps> = ({ initialData, onSubmit
         method: formValues.method,
         headers: headers.filter(h => h.key && h.value),
         body: formValues.body,
+        bodyFormat: formValues.bodyFormat || 'json',
         tokenPath: formValues.tokenPath,
         expiresInPath: formValues.expiresInPath,
         refreshTokenPath: formValues.refreshTokenPath,
@@ -148,6 +149,7 @@ const TokenConfigForm: React.FC<TokenConfigFormProps> = ({ initialData, onSubmit
           name: '',
           endpoint: '',
           method: 'POST',
+          bodyFormat: 'json',
           tokenPath: 'access_token',
           expiresInPath: 'expires_in',
           expiresIn: 3600,
@@ -184,6 +186,17 @@ const TokenConfigForm: React.FC<TokenConfigFormProps> = ({ initialData, onSubmit
             <Radio value="POST">POST</Radio>
             <Radio value="GET">GET</Radio>
             <Radio value="PUT">PUT</Radio>
+          </Radio.Group>
+        </Form.Item>
+
+        <Form.Item
+          name="bodyFormat"
+          label="Body Format"
+          tooltip="Choose how to encode the request body"
+        >
+          <Radio.Group>
+            <Radio value="json">JSON</Radio>
+            <Radio value="form">x-www-form-urlencoded</Radio>
           </Radio.Group>
         </Form.Item>
 
@@ -226,14 +239,25 @@ const TokenConfigForm: React.FC<TokenConfigFormProps> = ({ initialData, onSubmit
         </Form.Item>
 
         <Form.Item
-          name="body"
-          label="Request Body (JSON)"
-          tooltip="JSON body for token request. Use {{variable}} for dynamic values."
+          shouldUpdate={(prev, curr) => prev.bodyFormat !== curr.bodyFormat}
+          noStyle
         >
-          <Input.TextArea 
-            rows={4}
-            placeholder='{"grant_type": "client_credentials", "client_id": "{{client_id}}", "client_secret": "{{client_secret}}"}'
-          />
+          {() => {
+            const format = form.getFieldValue('bodyFormat');
+            const label = format === 'form' ? 'Request Body (Form or key=value&k2=v2)' : 'Request Body (JSON)';
+            const placeholder = format === 'form'
+              ? 'grant_type=client_credentials&client_id={{client_id}}&client_secret={{client_secret}}\nOR as JSON: {"grant_type":"client_credentials","client_id":"..."}'
+              : '{"grant_type": "client_credentials", "client_id": "{{client_id}}", "client_secret": "{{client_secret}}"}';
+            return (
+              <Form.Item
+                name="body"
+                label={label}
+                tooltip={format === 'form' ? 'Provide key=value pairs or JSON; will be urlencoded' : 'Use {{variable}} for dynamic values.'}
+              >
+                <Input.TextArea rows={4} placeholder={placeholder} />
+              </Form.Item>
+            );
+          }}
         </Form.Item>
 
         <Divider orientation="left">Token Response Configuration</Divider>

@@ -159,6 +159,7 @@ export interface TokenTestConfig {
   method?: string;
   headers?: Header[];
   body?: string;
+  bodyFormat?: 'json' | 'form';
   tokenPath: string;
   expiresInPath?: string;
   refreshTokenPath?: string;

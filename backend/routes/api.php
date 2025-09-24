@@ -40,6 +40,7 @@ Route::post('/tables', [DynamicTableController::class, 'createTable']);
 // Token Configuration Routes - specific routes must come before resource routes
 Route::get('/token-configs/active', [TokenConfigController::class, 'active']);
 Route::post('/token-configs/{id}/mark-used', [TokenConfigController::class, 'markAsUsed']);
+Route::post('/token-configs/test', [TokenConfigController::class, 'testAcquire']);
 Route::apiResource('token-configs', TokenConfigController::class);
 
 // API Source Routes - specific routes must come before resource routes

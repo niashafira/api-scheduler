@@ -607,18 +607,51 @@ class ApiExecutionService
     private function requestNewToken($tokenConfig): ?string
     {
         try {
+            Log::info("=== TOKEN DEBUG START ===");
+            Log::info("TokenConfig ID: " . $tokenConfig->id);
+            Log::info("TokenConfig endpoint: " . $tokenConfig->endpoint);
+            Log::info("TokenConfig method: " . $tokenConfig->method);
+            Log::info("TokenConfig body: " . ($tokenConfig->body ?? 'NULL'));
+            Log::info("TokenConfig headers: " . json_encode($tokenConfig->headers ?? []));
+            Log::info("TokenConfig token_path: " . ($tokenConfig->token_path ?? 'NULL'));
+
             $headers = [];
             if ($tokenConfig->headers) {
                 foreach ($tokenConfig->headers as $header) {
                     $headers[$header['key']] = $header['value'];
                 }
             }
+            Log::info("Processed headers: " . json_encode($headers));
 
-            $body = [];
-            if ($tokenConfig->body) {
-                $body = ['json' => json_decode($tokenConfig->body, true)];
+            // Force x-www-form-urlencoded for token acquisition to match Postman behavior
+            $bodyArray = [];
+            $rawBody = (string) ($tokenConfig->body ?? '');
+            if ($rawBody !== '') {
+                // Try JSON decode first
+                $decoded = json_decode($rawBody, true);
+                if (is_array($decoded)) {
+                    $bodyArray = $decoded;
+                } else {
+                    // Try parse_str for key=value&...
+                    $temp = [];
+                    parse_str($rawBody, $temp);
+                    if (is_array($temp) && !empty($temp)) {
+                        $bodyArray = $temp;
+                    }
+                }
+            }
+            Log::info('Token request (scheduler) as FORMDATA keys: ' . (empty($bodyArray) ? 'NONE' : implode(',', array_keys($bodyArray))));
+
+            // Ensure grant_type presence is visible in logs
+            if (!empty($bodyArray) && array_key_exists('grant_type', $bodyArray)) {
+                Log::info('grant_type detected: ' . (string) $bodyArray['grant_type']);
+            } else {
+                Log::warning('grant_type NOT found in form body');
             }
 
+            // Ensure Content-Type header
+            $headers['Content-Type'] = 'application/x-www-form-urlencoded';
+            Log::info("Final headers: " . json_encode($headers));
             Log::info("Requesting new token from: {$tokenConfig->endpoint} using method: {$tokenConfig->method}");
 
             $client = Http::withHeaders($headers);
@@ -627,9 +660,11 @@ class ApiExecutionService
                 Log::warning('SSL verification disabled for token request');
             }
 
+            // Send as form
             $response = $client
+                ->asForm()
                 ->timeout(30)
-                ->send($tokenConfig->method, $tokenConfig->endpoint, $body);
+                ->send($tokenConfig->method, $tokenConfig->endpoint, [ 'form_params' => $bodyArray ]);
 
             if ($response->successful()) {
                 $responseData = $response->json();

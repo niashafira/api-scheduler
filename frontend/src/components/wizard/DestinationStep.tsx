@@ -36,6 +36,7 @@ interface DestinationStepProps {
 
 interface TableColumn {
   name: string;
+  mappedField?: string; // JSON path for data extraction
   type: string;
   nullable: boolean;
   isPrimaryKey: boolean;
@@ -134,6 +135,7 @@ const DestinationStep: React.FC<DestinationStepProps> = ({
     // Convert extraction paths to table columns
     const newColumns: TableColumn[] = extractData.extractionPaths.map((path: any) => ({
       name: path.name,
+      mappedField: path.path, // Use the JSON path as mappedField
       type: mapDataTypeToSQL(path.dataType),
       nullable: !path.required,
       isPrimaryKey: extractData.primaryKeyFields?.includes(path.name) || false,
@@ -217,11 +219,11 @@ const DestinationStep: React.FC<DestinationStepProps> = ({
       }
 
       // Check for primary key
-      const hasPrimaryKey = validColumns.some(col => col.isPrimaryKey);
-      if (!hasPrimaryKey) {
-        message.error('At least one column must be marked as primary key');
-        return;
-      }
+      // const hasPrimaryKey = validColumns.some(col => col.isPrimaryKey);
+      // if (!hasPrimaryKey) {
+      //   message.error('At least one column must be marked as primary key');
+      //   return;
+      // }
 
       const formData = {
         destinationType: 'new' as const,

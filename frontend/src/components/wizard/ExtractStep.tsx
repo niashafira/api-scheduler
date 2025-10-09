@@ -617,10 +617,7 @@ const ExtractStep: React.FC<ExtractStepProps> = ({ onNext, onPrevious, sourceDat
         return;
       }
 
-      if (primaryKeyFields.length === 0) {
-        message.error('At least one primary key field must be selected');
-        return;
-      }
+      // Primary key fields are now optional - removed validation
       
       // Process form values
       const formData = {

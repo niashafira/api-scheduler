@@ -29,12 +29,12 @@ class DestinationService
                 return $column['isPrimaryKey'] ?? false;
             });
 
-            if (!$hasPrimaryKey) {
-                return [
-                    'success' => false,
-                    'message' => 'At least one column must be marked as primary key',
-                ];
-            }
+            // if (!$hasPrimaryKey) {
+            //     return [
+            //         'success' => false,
+            //         'message' => 'At least one column must be marked as primary key',
+            //     ];
+            // }
 
             // Convert column types to match DynamicTableService expectations
             $convertedColumns = $this->convertColumnsForTableCreation($data['columns']);
@@ -92,12 +92,12 @@ class DestinationService
                 return $column['isPrimaryKey'] ?? false;
             });
 
-            if (!$hasPrimaryKey) {
-                return [
-                    'success' => false,
-                    'message' => 'At least one column must be marked as primary key',
-                ];
-            }
+            // if (!$hasPrimaryKey) {
+            //     return [
+            //         'success' => false,
+            //         'message' => 'At least one column must be marked as primary key',
+            //     ];
+            // }
 
             // Update the destination record
             $destination->update([

@@ -201,6 +201,7 @@ export interface DynamicTable {
 
 export interface TableColumn {
   name: string;
+  mappedField?: string; // JSON path for data extraction
   type: 'string' | 'integer' | 'float' | 'boolean' | 'date' | 'text';
   nullable?: boolean;
   defaultValue?: any;

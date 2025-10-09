@@ -252,7 +252,7 @@ class ApiExecutionService
         }
 
         try {
-            Log::info("Storing data for schedule ID: {$schedule->id} to table: {$destination->table_name}");
+            Log::info("Storing data for schedule IDddd: {$schedule->id} to table: {$destination->table_name}");
 
             $result = $this->storeDataToTable($destination, $data);
 
@@ -284,25 +284,50 @@ class ApiExecutionService
             if (!is_array($data)) {
                 $data = [$data];
             }
-
+            Log::info("mapping columnsss '{$destination->table_name}'");
             $tableName = $destination->table_name;
             $columns = $destination->columns;
             $includeRawPayload = $destination->include_raw_payload;
             $includeIngestedAt = $destination->include_ingested_at;
 
             $insertData = [];
-
+            Log::info("mapping data '".json_encode($data)."'");
             foreach ($data as $item) {
+                Log::info("mapping item '".json_encode($item)."'");
                 $rowData = [];
 
                 // Map extracted data to table columns
                 foreach ($columns as $column) {
+                    Log::info("mapping column '".json_encode($column)."'");
                     $fieldName = $column['name'];
                     $mappedField = $column['mappedField'] ?? $fieldName;
+                    $columnType = $column['type'] ?? 'string';
+                    Log::info("extracted value for '{$fieldName}' (type: {$columnType})");
 
-                    if (is_array($item) && array_key_exists($mappedField, $item)) {
-                        $rowData[$fieldName] = $item[$mappedField];
+                    // Extract value using JSON path if it contains dots, otherwise use direct key lookup
+                    $value = null;
+                    if (strpos($mappedField, '.') !== false) {
+                        // Use JSON path extraction for nested fields like "data.lokasi.adm3"
+                        $value = $this->getValueByPath($item, $mappedField);
+                        Log::info("JSON path extraction for '{$mappedField}': " . ($value !== null ? json_encode($value) : 'NULL'));
                     } else {
+                        // Direct key lookup for simple fields
+                        if (is_array($item) && array_key_exists($mappedField, $item)) {
+                            $value = $item[$mappedField];
+                            Log::info("Direct key lookup for '{$mappedField}': " . json_encode($value));
+                        }
+                    }
+
+                    if ($value !== null) {
+                        // Handle JSON columns properly - encode arrays/objects as JSON
+                        if ($columnType === 'json' || (is_array($value) || is_object($value))) {
+                            $rowData[$fieldName] = json_encode($value);
+                            Log::info("JSON encoding field '{$fieldName}' (type: {$columnType})");
+                        } else {
+                            $rowData[$fieldName] = $value;
+                        }
+                    } else {
+                        Log::info("No value found for field '{$mappedField}'");
                         $rowData[$fieldName] = null;
                     }
                 }
@@ -334,7 +359,7 @@ class ApiExecutionService
         } catch (\Exception $e) {
             return [
                 'success' => false,
-                'message' => "Failed to store data: {$e->getMessage()}"
+                'message' => "Failed to store data: {$e->getFile()}:{$e->getLine()}: {$e->getMessage()}"
             ];
         }
     }
@@ -747,5 +772,32 @@ class ApiExecutionService
         }
         $pattern = '/([?&]'.preg_quote($paramName, '/').'=)([^&#]*)/i';
         return preg_replace($pattern, '$1***', $url) ?: $url;
+    }
+
+    /**
+     * Extract value from array/object using dot notation path
+     *
+     * @param mixed $data
+     * @param string $path
+     * @return mixed
+     */
+    private function getValueByPath($data, string $path)
+    {
+        if (!$path || !$data) {
+            return null;
+        }
+
+        $keys = explode('.', $path);
+        $current = $data;
+
+        foreach ($keys as $key) {
+            if (is_array($current) && array_key_exists($key, $current)) {
+                $current = $current[$key];
+            } else {
+                return null;
+            }
+        }
+
+        return $current;
     }
 }

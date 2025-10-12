@@ -135,6 +135,13 @@ class ScheduleApi {
   async getCronSchedules(): Promise<ApiResponse<ScheduleResponse[]>> {
     return this.request<ScheduleResponse[]>('/schedules/cron');
   }
+
+  // Manually execute a schedule
+  async executeSchedule(id: number): Promise<ApiResponse<any>> {
+    return this.request<any>(`/schedules/${id}/execute`, {
+      method: 'POST',
+    });
+  }
 }
 
 const scheduleApi = new ScheduleApi();

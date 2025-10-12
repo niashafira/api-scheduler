@@ -4,16 +4,20 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\CreateScheduleRequest;
 use App\Services\ScheduleService;
+use App\Services\ApiExecutionService;
+use App\Models\Schedule;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class ScheduleController extends Controller
 {
     protected $scheduleService;
+    protected $apiExecutionService;
 
-    public function __construct(ScheduleService $scheduleService)
+    public function __construct(ScheduleService $scheduleService, ApiExecutionService $apiExecutionService)
     {
         $this->scheduleService = $scheduleService;
+        $this->apiExecutionService = $apiExecutionService;
     }
 
     /**
@@ -104,5 +108,32 @@ class ScheduleController extends Controller
         $result = $this->scheduleService->getCronSchedules();
 
         return response()->json($result, $result['success'] ? 200 : 400);
+    }
+
+    /**
+     * Manually execute a schedule.
+     */
+    public function execute(int $id): JsonResponse
+    {
+        try {
+            // Get the schedule model directly
+            $schedule = Schedule::find($id);
+            if (!$schedule) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Schedule not found'
+                ], 404);
+            }
+
+            // Execute the schedule using the same service as the scheduler
+            $result = $this->apiExecutionService->executeScheduledCall($schedule);
+
+            return response()->json($result, $result['success'] ? 200 : 400);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to execute schedule: ' . $e->getMessage()
+            ], 500);
+        }
     }
 }

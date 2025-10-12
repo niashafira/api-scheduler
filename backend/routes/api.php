@@ -68,4 +68,5 @@ Route::apiResource('destinations', DestinationController::class);
 Route::get('/schedules/active', [ScheduleController::class, 'getActive']);
 Route::get('/schedules/cron', [ScheduleController::class, 'getCron']);
 Route::get('/schedules/source/{sourceId}', [ScheduleController::class, 'getBySource']);
+Route::post('/schedules/{id}/execute', [ScheduleController::class, 'execute']);
 Route::apiResource('schedules', ScheduleController::class);

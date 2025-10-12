@@ -3,9 +3,9 @@ import { Typography, Table, Tag, Space, Button, Tooltip, message, Spin } from 'a
 import { 
   PlayCircleOutlined, 
   PauseCircleOutlined, 
-  PlusOutlined
+  ThunderboltOutlined,
+  LoadingOutlined
 } from '@ant-design/icons';
-import { useNavigate } from 'react-router-dom';
 import scheduleApi, { ScheduleResponse } from '../services/scheduleApi';
 
 const { Title } = Typography;
@@ -13,9 +13,9 @@ const { Title } = Typography;
 const formatDateTime = (iso?: string | null) => (iso ? new Date(iso).toLocaleString() : null);
 
 const Schedules: React.FC = () => {
-  const navigate = useNavigate();
   const [loading, setLoading] = useState<boolean>(true);
   const [rows, setRows] = useState<ScheduleResponse[]>([]);
+  const [executingSchedules, setExecutingSchedules] = useState<Set<number>>(new Set());
 
   const fetchSchedules = async (): Promise<void> => {
     try {
@@ -95,6 +95,32 @@ const Schedules: React.FC = () => {
     }
   };
 
+  const executeSchedule = async (record: ScheduleResponse): Promise<void> => {
+    try {
+      // Add to executing set
+      setExecutingSchedules(prev => new Set(prev).add(record.id));
+      
+      const result = await scheduleApi.executeSchedule(record.id);
+      
+      if (result.success) {
+        message.success('Schedule executed successfully');
+        fetchSchedules(); // Refresh to update last run time
+      } else {
+        message.error(result.message || 'Failed to execute schedule');
+      }
+    } catch (e) {
+      console.error('Failed to execute schedule:', e);
+      message.error('Failed to execute schedule');
+    } finally {
+      // Remove from executing set
+      setExecutingSchedules(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(record.id);
+        return newSet;
+      });
+    }
+  };
+
   // deleteSchedule removed per UI simplification
 
   const columns = [
@@ -159,6 +185,18 @@ const Schedules: React.FC = () => {
               onClick={() => pauseOrResume(record)}
             />
           </Tooltip>
+          {record.scheduleType === 'manual' && (
+            <Tooltip title={executingSchedules.has(record.id) ? "Executing..." : "Execute Now"}>
+              <Button 
+                type="text" 
+                icon={executingSchedules.has(record.id) ? <LoadingOutlined /> : <ThunderboltOutlined />} 
+                onClick={() => executeSchedule(record)}
+                loading={executingSchedules.has(record.id)}
+                disabled={executingSchedules.has(record.id)}
+                style={{ color: executingSchedules.has(record.id) ? '#1890ff' : '#52c41a' }}
+              />
+            </Tooltip>
+          )}
         </Space>
       ),
     },

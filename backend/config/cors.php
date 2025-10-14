@@ -26,6 +26,8 @@ return [
         'http://127.0.0.1:3001',
         'http://172.20.10.115:8081',
         'https://172.20.10.115:8081',
+        'http://api-pooling.badanpangan.go.id/',
+        'https://api-pooling.badanpangan.go.id/'
     ],
 
     'allowed_origins_patterns' => [],

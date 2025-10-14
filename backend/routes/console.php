@@ -11,7 +11,7 @@ Artisan::command('inspire', function () {
 // Schedule tasks
 Schedule::command('scheduler:process')
     ->everyMinute()
-    ->withoutOverlapping()
+    // ->withoutOverlapping()
     ->runInBackground();
 
 Schedule::command('scheduler:monitor')

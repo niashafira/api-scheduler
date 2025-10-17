@@ -8,6 +8,21 @@ interface RequestOptions extends RequestInit {
 }
 
 class ApiExtractApi {
+  private normalizeExtractPayload<T extends Partial<ExtractFormData>>(data: T): T {
+    const copy: any = { ...data };
+    if (typeof copy.rootArrayPath === 'string') {
+      const trimmed = copy.rootArrayPath.trim();
+      copy.rootArrayPath = trimmed === '' ? null : trimmed;
+    }
+    if (Array.isArray(copy.extractionPaths)) {
+      copy.extractionPaths = (copy.extractionPaths as ExtractionPath[]).filter((p: ExtractionPath) => {
+        const nameOk = typeof p?.name === 'string' && p.name.trim() !== '';
+        const pathOk = typeof p?.path === 'string' && p.path.trim() !== '';
+        return nameOk && pathOk;
+      });
+    }
+    return copy as T;
+  }
   async request<T = any>(endpoint: string, options: RequestOptions = {}): Promise<ApiResponse<T>> {
     const url = `${API_BASE_URL}${endpoint}`;
     const config: RequestOptions = {
@@ -56,17 +71,19 @@ class ApiExtractApi {
 
   // Create a new API extract
   async createApiExtract(data: ExtractFormData): Promise<ApiResponse<ApiExtract>> {
+    const payload = this.normalizeExtractPayload<ExtractFormData>(data);
     return this.request<ApiExtract>('/api-extracts', {
       method: 'POST',
-      body: JSON.stringify(data),
+      body: JSON.stringify(payload),
     });
   }
 
   // Update an API extract
   async updateApiExtract(id: number, data: Partial<ExtractFormData>): Promise<ApiResponse<ApiExtract>> {
+    const payload = this.normalizeExtractPayload<Partial<ExtractFormData>>(data);
     return this.request<ApiExtract>(`/api-extracts/${id}`, {
       method: 'PUT',
-      body: JSON.stringify(data),
+      body: JSON.stringify(payload),
     });
   }
 
@@ -93,11 +110,17 @@ class ApiExtractApi {
 
   // Test extraction with custom data
   async testExtractionWithData(extractionPaths: ExtractionPath[], rootArrayPath: string, data: any): Promise<ApiResponse<TestResponse>> {
+    const normalizedRoot = (rootArrayPath ?? '').trim() === '' ? null : rootArrayPath.trim();
+    const filteredPaths = (extractionPaths ?? []).filter((p: ExtractionPath) => {
+      const nameOk = typeof p?.name === 'string' && p.name.trim() !== '';
+      const pathOk = typeof p?.path === 'string' && p.path.trim() !== '';
+      return nameOk && pathOk;
+    });
     return this.request<TestResponse>('/api-extracts/test-with-data', {
       method: 'POST',
       body: JSON.stringify({
-        extraction_paths: extractionPaths,
-        root_array_path: rootArrayPath,
+        extraction_paths: filteredPaths,
+        root_array_path: normalizedRoot,
         data: data
       }),
     });

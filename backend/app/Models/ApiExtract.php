@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Facades\Log;
 
 class ApiExtract extends Model
 {
@@ -76,8 +77,18 @@ class ApiExtract extends Model
             return null;
         }
 
+        // Debug: log what we're working with
+        try {
+            $rootType = is_array($rootData) ? 'array' : gettype($rootData);
+            $rootKeys = is_array($rootData) ? implode(',', array_slice(array_keys($rootData), 0, 10)) : 'N/A';
+            Log::info("Extract: rootData type={$rootType}, keys={$rootKeys}, root_array_path=" . ($this->root_array_path ?? 'NULL'));
+        } catch (\Throwable $e) { /* ignore */ }
+
         // If root data is not an array, wrap it in an array
         if (!is_array($rootData)) {
+            $rootData = [$rootData];
+        } elseif (is_array($rootData) && !$this->root_array_path) {
+            // If root_array_path is null, treat the entire response as a single item
             $rootData = [$rootData];
         }
 
@@ -104,6 +115,11 @@ class ApiExtract extends Model
     protected function getRootData($response)
     {
         if (!$this->root_array_path) {
+            // Debug: no root path configured; log top-level keys
+            try {
+                $preview = is_array($response) ? implode(',', array_slice(array_keys($response), 0, 10)) : gettype($response);
+                Log::info("Extract: no root_array_path set; top-level keys/type: {$preview}");
+            } catch (\Throwable $e) { /* ignore */ }
             return $response;
         }
 
@@ -117,6 +133,11 @@ class ApiExtract extends Model
             } elseif (is_object($data) && property_exists($data, $segment)) {
                 $data = $data->{$segment};
             } else {
+                // Debug: failed to resolve root path segment
+                try {
+                    $available = is_array($data) ? implode(',', array_slice(array_keys($data), 0, 20)) : (is_object($data) ? implode(',', array_slice(array_keys(get_object_vars($data)), 0, 20)) : gettype($data));
+                    Log::warning("Extract: root_array_path resolution failed at segment '{$segment}' in '{$path}'. Available keys: {$available}");
+                } catch (\Throwable $e) { /* ignore */ }
                 return null;
             }
         }
@@ -148,6 +169,11 @@ class ApiExtract extends Model
 
             // Handle null values based on configuration
             if ($value === null) {
+                // Debug: log missing field
+                try {
+                    $available = is_array($item) ? implode(',', array_slice(array_keys($item), 0, 20)) : (is_object($item) ? implode(',', array_slice(array_keys(get_object_vars($item)), 0, 20)) : gettype($item));
+                    Log::warning("Extract: value null for field '{$fieldName}' using path '{$path}'. Item keys/type: {$available}");
+                } catch (\Throwable $e) { /* ignore */ }
                 $value = $this->handleNullValue($dataType);
             } else {
                 // Convert to the specified data type

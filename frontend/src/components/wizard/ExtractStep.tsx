@@ -478,7 +478,7 @@ const ExtractStep: React.FC<ExtractStepProps> = ({ onNext, onPrevious, sourceDat
         return;
       }
       
-      // Get the root array data first if a root path is specified
+      // Get the root array data first
       let dataToExtractFrom = responseData;
       if (rootArrayPath) {
         const rootData = jsonPath.getValue(responseData, rootArrayPath);
@@ -486,6 +486,9 @@ const ExtractStep: React.FC<ExtractStepProps> = ({ onNext, onPrevious, sourceDat
           // Use the first item in the array for extraction preview
           dataToExtractFrom = rootData[0];
         }
+      } else if (Array.isArray(responseData) && responseData.length > 0) {
+        // If root is an array, use the first item
+        dataToExtractFrom = responseData[0];
       }
       
       // Extract data using the provided path
@@ -778,15 +781,14 @@ const ExtractStep: React.FC<ExtractStepProps> = ({ onNext, onPrevious, sourceDat
                 label={
                   <span>
                     Root Array Path 
-                    <Tooltip title="The JSON path to the main data array in the response">
+                    <Tooltip title="Path to the main data array. Leave empty if the array is at the root.">
                       <QuestionCircleOutlined style={{ marginLeft: 8 }} />
                     </Tooltip>
                   </span>
                 }
-                rules={[{ required: true, message: 'Please specify the root array path' }]}
               >
                 <Input 
-                  placeholder="e.g., data, results, items"
+                  placeholder="e.g., data, results, items (leave empty for root)"
                   value={rootArrayPath}
                   onChange={(e) => setRootArrayPath(e.target.value)}
                   addonAfter={
@@ -795,15 +797,19 @@ const ExtractStep: React.FC<ExtractStepProps> = ({ onNext, onPrevious, sourceDat
                       size="small"
                       icon={<EyeOutlined />}
                       onClick={() => {
+                        setSelectedPath(null);
                         if (rootArrayPath) {
                           const extracted = jsonPath.getValue(responseData, rootArrayPath);
-                          setSelectedPath(null);
                           setExtractionPreview(extracted);
                           if (extracted === undefined || extracted === null) {
                             setExtractionError(`No data found at path: ${rootArrayPath}`);
                           } else {
                             setExtractionError(null);
                           }
+                        } else {
+                          // Root selected
+                          setExtractionPreview(responseData);
+                          setExtractionError(null);
                         }
                       }}
                     />

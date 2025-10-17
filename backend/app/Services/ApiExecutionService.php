@@ -163,7 +163,12 @@ class ApiExecutionService
             Log::info("Request headers: " . json_encode($this->maskHeaders($headers)));
 
             $client = Http::withHeaders($headers);
-            if (!config('app.http_ssl_verify', true)) {
+            $verify = config('app.http_ssl_verify', true);
+            $caBundle = config('app.http_ca_bundle');
+            if ($caBundle) {
+                $client = $client->withOptions(['verify' => $caBundle]);
+                Log::info('Using custom CA bundle for HTTP client');
+            } elseif (!$verify) {
                 $client = $client->withoutVerifying();
                 Log::warning('SSL verification disabled for HTTP client');
             }
@@ -218,6 +223,12 @@ class ApiExecutionService
 
         try {
             Log::info("Extracting data for schedule ID: {$schedule->id}");
+            try {
+                $samplePreview = is_array($responseData)
+                    ? substr(json_encode(is_array($responseData) && array_keys($responseData) === range(0, count($responseData)-1) ? array_slice($responseData, 0, 1) : $responseData), 0, 500)
+                    : substr((string) $responseData, 0, 500);
+                Log::info("Extract input preview: {$samplePreview}");
+            } catch (\Throwable $e) { /* ignore */ }
 
             $extractedData = $apiExtract->extractData($responseData);
             $apiExtract->markAsExecuted();
@@ -253,6 +264,10 @@ class ApiExecutionService
 
         try {
             Log::info("Storing data for schedule IDddd: {$schedule->id} to table: {$destination->table_name}");
+            try {
+                $preview = is_array($data) ? substr(json_encode(array_slice($data, 0, 1)), 0, 500) : substr((string) $data, 0, 500);
+                Log::info("Store input preview: {$preview}");
+            } catch (\Throwable $e) { /* ignore */ }
 
             $result = $this->storeDataToTable($destination, $data);
 
@@ -680,7 +695,12 @@ class ApiExecutionService
             Log::info("Requesting new token from: {$tokenConfig->endpoint} using method: {$tokenConfig->method}");
 
             $client = Http::withHeaders($headers);
-            if (!config('app.http_ssl_verify', true)) {
+            $verify = config('app.http_ssl_verify', true);
+            $caBundle = config('app.http_ca_bundle');
+            if ($caBundle) {
+                $client = $client->withOptions(['verify' => $caBundle]);
+                Log::info('Using custom CA bundle for token request');
+            } elseif (!$verify) {
                 $client = $client->withoutVerifying();
                 Log::warning('SSL verification disabled for token request');
             }

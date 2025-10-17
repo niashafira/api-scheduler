@@ -285,8 +285,16 @@ class TokenConfigController extends Controller
                 }
             }
 
-            $response = Http::withHeaders($headers)
-                ->send($method, $endpoint, [ 'body' => $payload ]);
+            $client = Http::withHeaders($headers);
+            $verify = config('app.http_ssl_verify', true);
+            $caBundle = config('app.http_ca_bundle');
+            if ($caBundle) {
+                $client = $client->withOptions(['verify' => $caBundle]);
+            } elseif (!$verify) {
+                $client = $client->withoutVerifying();
+            }
+
+            $response = $client->send($method, $endpoint, [ 'body' => $payload ]);
 
             if (!$response->ok()) {
                 return response()->json([

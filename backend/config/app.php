@@ -123,4 +123,20 @@ return [
         'store' => env('APP_MAINTENANCE_STORE', 'database'),
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | HTTP SSL Verification
+    |--------------------------------------------------------------------------
+    |
+    | Controls SSL certificate verification for outbound HTTP requests
+    | performed via Laravel's HTTP client. For local development environments
+    | you may set HTTP_SSL_VERIFY=false to bypass verification. In production,
+    | this should remain true and optionally provide a custom CA bundle path
+    | via HTTP_CA_BUNDLE if needed.
+    |
+    */
+
+    'http_ssl_verify' => (bool) env('HTTP_SSL_VERIFY', true),
+    'http_ca_bundle' => env('HTTP_CA_BUNDLE', null),
+
 ];

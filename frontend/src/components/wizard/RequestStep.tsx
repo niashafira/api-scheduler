@@ -27,7 +27,7 @@ import {
 import { apiService, jsonPath } from '../../utils/apiService';
 import apiSourceApi from '../../services/apiSourceApi';
 import apiRequestApi from '../../services/apiRequestApi';
-import { ApiSource, ApiRequest, Header, TokenTestResponse, PathParam, QueryParam, TestResult } from '../../types';
+import { ApiSource, ApiRequest, Header, PathParam, QueryParam, TestResult } from '../../types';
 
 const { Title, Text } = Typography;
 const { TabPane } = Tabs;
@@ -194,43 +194,12 @@ const RequestStep: React.FC<RequestStepProps> = ({ onNext, onPrevious, sourceDat
 
   const buildFullUrl = (): string => {
     if (!apiSource || !apiSource.baseUrl) return '';
-    
-    // Remove trailing slash from base URL if present
-    const baseUrl = apiSource.baseUrl.endsWith('/') 
-      ? apiSource.baseUrl.slice(0, -1) 
-      : apiSource.baseUrl;
-    
-    // Handle empty or slash-only path
-    if (!endpointPath || endpointPath === '/') {
-      // Build query string
-      const queryString = queryParams
-        .filter(param => param.name)
-        .map(param => `${encodeURIComponent(param.name)}=${encodeURIComponent(param.value || '')}`)
-        .join('&');
-      
-      return `${baseUrl}${queryString ? '?' + queryString : ''}`;
-    }
-    
-    // Add leading slash to path if not present
-    const path = endpointPath.startsWith('/') 
-      ? endpointPath 
-      : '/' + endpointPath;
-    
-    // Replace path parameters with their values
-    let processedPath = path;
-    pathParams.forEach(param => {
-      if (param.name && param.value) {
-        processedPath = processedPath.replace(`{${param.name}}`, encodeURIComponent(param.value));
-      }
-    });
-    
-    // Build query string
-    const queryString = queryParams
-      .filter(param => param.name)
-      .map(param => `${encodeURIComponent(param.name)}=${encodeURIComponent(param.value || '')}`)
-      .join('&');
-    
-    return `${baseUrl}${processedPath}${queryString ? '?' + queryString : ''}`;
+    return apiService.buildUrl(
+      apiSource.baseUrl,
+      endpointPath,
+      pathParams,
+      queryParams
+    );
   };
 
   const testRequest = async (): Promise<void> => {
@@ -247,32 +216,13 @@ const RequestStep: React.FC<RequestStepProps> = ({ onNext, onPrevious, sourceDat
         throw new Error('Invalid URL. Please check your endpoint configuration.');
       }
       
-      // Prepare headers
-      const headerObj: Record<string, string> = {};
-      headers.forEach(header => {
-        if (header.key && header.value) {
-          headerObj[header.key] = header.value;
-        }
-      });
-      
-      // Prepare request options
-      const options: { method: string; headers: Record<string, string>; body?: any } = {
-        method: httpMethod,
-        headers: headerObj,
-      };
-      
-      // Add body for methods that support it
-      if (['POST', 'PUT', 'PATCH'].includes(httpMethod) && requestBody) {
-        if (bodyFormat === 'json') {
-          try {
-            options.body = JSON.parse(requestBody);
-          } catch (e) {
-            throw new Error('Invalid JSON in request body');
-          }
-        } else {
-          options.body = requestBody;
-        }
-      }
+      // Build request options using shared helper
+      const options = apiService.buildRequestOptions(
+        httpMethod,
+        bodyFormat as 'json' | 'form' | 'raw',
+        requestBody,
+        headers
+      );
       
       // Handle token-based authentication
       if (apiSource && apiSource.authType === 'token' && (apiSource as any).tokenConfig) {
@@ -311,7 +261,8 @@ const RequestStep: React.FC<RequestStepProps> = ({ onNext, onPrevious, sourceDat
           console.log('Token acquired successfully:', tokenData);
           
           // Add token to request headers
-          options.headers['Authorization'] = `Bearer ${tokenData.token}`;
+          // Ensure headers is a record before assigning
+          (options.headers as Record<string, string>)['Authorization'] = `Bearer ${tokenData.token}`;
           
           setTestStep('Testing API with token...');
         } catch (tokenError) {
@@ -320,7 +271,7 @@ const RequestStep: React.FC<RequestStepProps> = ({ onNext, onPrevious, sourceDat
       }
       
       // Make the test request
-      const response = await apiService.testCustomRequest(fullUrl, options);
+      const response = await apiService.testCustomRequest(fullUrl, options as any);
       
       // Prepare test result
       const result: TestResult = {
@@ -332,10 +283,10 @@ const RequestStep: React.FC<RequestStepProps> = ({ onNext, onPrevious, sourceDat
       };
       
       // If token-based auth, include token info
-      if (apiSource && apiSource.authType === 'token' && options.headers['Authorization']) {
+      if (apiSource && apiSource.authType === 'token' && (options.headers as Record<string, string>)['Authorization']) {
         result.tokenUsed = true;
         // Extract token from Authorization header (Bearer token)
-        const token = options.headers['Authorization'].replace('Bearer ', '');
+        const token = (options.headers as Record<string, string>)['Authorization'].replace('Bearer ', '');
         result.token = token;
       }
       

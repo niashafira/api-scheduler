@@ -1,4 +1,4 @@
-import { TokenTestConfig, TokenTestResponse, ApiTestResponse, Header } from '../types';
+import { TokenTestConfig, TokenTestResponse, ApiTestResponse, Header, PathParam, QueryParam } from '../types';
 
 // Request options interface
 interface RequestOptions extends RequestInit {
@@ -18,6 +18,62 @@ interface TokenData {
 
 // API Service for making HTTP requests
 export const apiService = {
+  // Build a full URL from base, path, path params and query params
+  buildUrl(baseUrl: string, path: string = '', pathParams: PathParam[] = [], queryParams: QueryParam[] = []): string {
+    if (!baseUrl) return '';
+    let cleanBase = baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl;
+    let cleanPath = path || '';
+    if (cleanPath && !cleanPath.startsWith('/')) cleanPath = '/' + cleanPath;
+    // Replace path params
+    if (Array.isArray(pathParams)) {
+      pathParams.forEach(param => {
+        if (param?.name && param?.value) {
+          cleanPath = cleanPath.replace(`{${param.name}}`, encodeURIComponent(param.value));
+        }
+      });
+    }
+    // Build query string
+    const pairs = (Array.isArray(queryParams) ? queryParams : [])
+      .filter(p => p && p.name)
+      .map(p => `${encodeURIComponent(p.name)}=${encodeURIComponent(p.value || '')}`);
+    const qs = pairs.length ? `?${pairs.join('&')}` : '';
+    return `${cleanBase}${cleanPath}${qs}`;
+  },
+
+  // Build RequestOptions with safe defaults to minimize CORS preflight for simple requests
+  buildRequestOptions(method: string, bodyFormat?: 'json' | 'form' | 'raw', body?: string, headersArr: Header[] = []): RequestOptions {
+    const upperMethod = (method || 'GET').toUpperCase();
+    const headers: Record<string, string> = { 'Accept': 'application/json' };
+
+    // Only add Content-Type when sending a body
+    if (['POST', 'PUT', 'PATCH'].includes(upperMethod)) {
+      if (bodyFormat === 'json') headers['Content-Type'] = 'application/json';
+      else if (bodyFormat === 'form') headers['Content-Type'] = 'application/x-www-form-urlencoded;charset=UTF-8';
+      else if (bodyFormat === 'raw' || bodyFormat === 'text') headers['Content-Type'] = 'text/plain;charset=UTF-8';
+    }
+
+    // Merge additional headers
+    (headersArr || []).forEach(h => {
+      if (h?.key && h?.value) headers[h.key] = h.value;
+    });
+
+    const options: RequestOptions = { method: upperMethod, headers };
+
+    if (['POST', 'PUT', 'PATCH'].includes(upperMethod) && body) {
+      if (bodyFormat === 'json') {
+        try {
+          options.body = JSON.stringify(JSON.parse(body));
+        } catch {
+          // If not valid JSON, send raw
+          options.body = body;
+        }
+      } else {
+        options.body = body;
+      }
+    }
+
+    return options;
+  },
   async makeRequest(url: string, options: RequestOptions = {}): Promise<any> {
     const defaultOptions: RequestOptions = {
       method: 'GET',

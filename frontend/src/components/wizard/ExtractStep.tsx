@@ -131,11 +131,21 @@ const ExtractStep: React.FC<ExtractStepProps> = ({ onNext, onPrevious, sourceDat
       }
       
       // Build the URL first
-      const url = buildRequestUrl();
+      const url = apiService.buildUrl(
+        sourceData!.baseUrl,
+        requestData.path,
+        requestData.pathParams || [],
+        requestData.queryParams || []
+      );
       console.log('fetchTestResponse - built URL:', url);
       
       // Build request options with token authentication if needed
-      let requestOptions = buildRequestOptions();
+      let requestOptions: any = apiService.buildRequestOptions(
+        requestData.method,
+        requestData.bodyFormat,
+        requestData.body,
+        requestData.headers || []
+      );
       
       // Handle token-based authentication
       if (sourceData && sourceData.authType === 'token' && sourceData.tokenConfigId) {
@@ -263,102 +273,7 @@ const ExtractStep: React.FC<ExtractStepProps> = ({ onNext, onPrevious, sourceDat
     return { message: 'No data received' };
   };
   
-  // Build the full request URL from the request data
-  const buildRequestUrl = (): string => {
-    console.log('buildRequestUrl - sourceData:', sourceData);
-    console.log('buildRequestUrl - requestData:', requestData);
-    
-    if (!requestData || !sourceData) {
-      console.log('buildRequestUrl - Missing data:', { requestData: !!requestData, sourceData: !!sourceData });
-      return '';
-    }
-    
-    // Get base URL from source
-    let baseUrl = sourceData.baseUrl;
-    console.log('buildRequestUrl - baseUrl:', baseUrl);
-    
-    // Check if baseUrl is valid (not localhost:3000 or empty)
-    if (!baseUrl || baseUrl.includes('localhost:3000') || baseUrl === '') {
-      console.error('buildRequestUrl - Invalid baseUrl:', baseUrl);
-      throw new Error('Invalid or missing base URL in source data');
-    }
-    
-    if (baseUrl.endsWith('/')) {
-      baseUrl = baseUrl.slice(0, -1);
-    }
-    
-    // Get path from request
-    let path = requestData.path || '';
-    console.log('buildRequestUrl - path:', path);
-    
-    if (!path.startsWith('/')) {
-      path = '/' + path;
-    }
-    
-    // Replace path parameters with their values
-    if (requestData.pathParams && Array.isArray(requestData.pathParams)) {
-      requestData.pathParams.forEach(param => {
-        if (param.name && param.value) {
-          path = path.replace(`{${param.name}}`, encodeURIComponent(param.value));
-        }
-      });
-    }
-    
-    // Build query string
-    let queryString = '';
-    if (requestData.queryParams && Array.isArray(requestData.queryParams)) {
-      const queryParams = requestData.queryParams
-        .filter(param => param.name)
-        .map(param => `${encodeURIComponent(param.name)}=${encodeURIComponent(param.value || '')}`);
-      
-      if (queryParams.length > 0) {
-        queryString = '?' + queryParams.join('&');
-      }
-    }
-    
-    const finalUrl = baseUrl + path + queryString;
-    console.log('buildRequestUrl - finalUrl:', finalUrl);
-    
-    return finalUrl;
-  };
-  
-  // Build the request options from the request data
-  const buildRequestOptions = (): any => {
-    if (!requestData) return { method: 'GET' };
-    
-    const options: any = {
-      method: requestData.method || 'GET',
-      headers: {
-        // Add default headers for JSON
-        'Accept': 'application/json',
-        'Content-Type': 'application/json'
-      },
-    };
-    
-    // Add headers
-    if (requestData.headers && Array.isArray(requestData.headers)) {
-      requestData.headers.forEach(header => {
-        if (header.key && header.value) {
-          options.headers[header.key] = header.value;
-        }
-      });
-    }
-    
-    // Add body for methods that support it
-    if (['POST', 'PUT', 'PATCH'].includes(options.method) && requestData.body) {
-      if (requestData.bodyFormat === 'json') {
-        try {
-          options.body = JSON.parse(requestData.body);
-        } catch (e) {
-          options.body = requestData.body;
-        }
-      } else {
-        options.body = requestData.body;
-      }
-    }
-    
-    return options;
-  };
+  // (replaced by shared helpers in apiService)
 
   const detectRootArrayPaths = (data: any): void => {
     // Check if data is not a proper object (e.g., HTML response)

@@ -59,6 +59,7 @@ Route::get('/api-extracts/active', [ApiExtractController::class, 'active']);
 Route::get('/api-extracts/request/{requestId}', [ApiExtractController::class, 'byRequest']);
 Route::post('/api-extracts/{id}/mark-executed', [ApiExtractController::class, 'markAsExecuted']);
 Route::post('/api-extracts/{id}/test', [ApiExtractController::class, 'testExtraction']);
+Route::get('/api-extracts/custom/harga-pangan', [ApiExtractController::class, 'hargaPangan']);
 Route::apiResource('api-extracts', ApiExtractController::class);
 
 // Destination Routes

@@ -3,7 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Services\ApiExtractService;
+use App\Services\HargaPanganService;
 use App\Utils\ResponseTransformer;
+use App\Models\HargaPangan;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Validation\ValidationException;
@@ -11,10 +13,12 @@ use Illuminate\Validation\ValidationException;
 class ApiExtractController extends Controller
 {
     protected $apiExtractService;
+    protected $hargaPanganService;
 
-    public function __construct(ApiExtractService $apiExtractService)
+    public function __construct(ApiExtractService $apiExtractService, HargaPanganService $hargaPanganService)
     {
         $this->apiExtractService = $apiExtractService;
+        $this->hargaPanganService = $hargaPanganService;
     }
 
     /**
@@ -271,6 +275,50 @@ class ApiExtractController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Extraction test failed',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Get harga pangan data with date range and region code filter.
+     */
+    public function hargaPangan(Request $request): JsonResponse
+    {
+        try {
+            // Validate required parameters
+            $request->validate([
+                'startDate' => 'required|date',
+                'endDate' => 'required|date|after_or_equal:startDate'
+            ]);
+
+            $startDate = $request->input('startDate');
+            $endDate = $request->input('endDate');
+
+            // Use the service to get data
+            $hargaPanganData = $this->hargaPanganService->getHargaPanganData($startDate, $endDate);
+            $transformedData = ResponseTransformer::transformCollection(collect($hargaPanganData));
+
+            return response()->json([
+                'success' => true,
+                'data' => $transformedData,
+                'count' => count($hargaPanganData),
+                'filters' => [
+                    'startDate' => $startDate,
+                    'endDate' => $endDate
+                ],
+                'message' => 'Harga pangan data retrieved successfully'
+            ]);
+        } catch (ValidationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation failed',
+                'errors' => $e->errors()
+            ], 422);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to retrieve harga pangan data',
                 'error' => $e->getMessage()
             ], 500);
         }

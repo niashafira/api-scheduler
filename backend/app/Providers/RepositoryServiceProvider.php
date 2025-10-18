@@ -8,11 +8,13 @@ use App\Repositories\TokenConfigRepository;
 use App\Repositories\ApiSourceRepository;
 use App\Repositories\ApiRequestRepository;
 use App\Repositories\ApiExtractRepository;
+use App\Repositories\HargaPanganRepository;
 use App\Repositories\Interfaces\ApiSourceRepositoryInterface;
 use App\Services\TokenConfigService;
 use App\Services\ApiSourceService;
 use App\Services\ApiRequestService;
 use App\Services\ApiExtractService;
+use App\Services\HargaPanganService;
 use Illuminate\Support\ServiceProvider;
 
 class RepositoryServiceProvider extends ServiceProvider
@@ -40,6 +42,8 @@ class RepositoryServiceProvider extends ServiceProvider
         $this->app->bind(ApiRequestService::class);
         $this->app->bind(ApiExtractRepository::class);
         $this->app->bind(ApiExtractService::class);
+        $this->app->bind(HargaPanganRepository::class);
+        $this->app->bind(HargaPanganService::class);
     }
 
     /**

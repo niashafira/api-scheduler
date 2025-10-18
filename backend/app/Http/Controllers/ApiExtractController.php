@@ -295,19 +295,17 @@ class ApiExtractController extends Controller
             $startDate = $request->input('startDate');
             $endDate = $request->input('endDate');
 
-            // Use the service to get data
-            $hargaPanganData = $this->hargaPanganService->getHargaPanganData($startDate, $endDate);
-            $transformedData = ResponseTransformer::transformCollection(collect($hargaPanganData));
+            // Use the service to get data count
+            $totalCount = $this->hargaPanganService->getHargaPanganData($startDate, $endDate);
 
             return response()->json([
                 'success' => true,
-                'data' => $transformedData,
-                'count' => count($hargaPanganData),
+                'count' => $totalCount,
                 'filters' => [
                     'startDate' => $startDate,
                     'endDate' => $endDate
                 ],
-                'message' => 'Harga pangan data retrieved successfully'
+                'message' => 'Harga pangan data processed successfully'
             ]);
         } catch (ValidationException $e) {
             return response()->json([

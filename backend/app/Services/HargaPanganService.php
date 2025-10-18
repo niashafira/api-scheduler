@@ -26,17 +26,17 @@ class HargaPanganService
     /**
      * Get harga pangan data by date range and region codes
      */
-    public function getHargaPanganData(string $startDate, string $endDate): array
+    public function getHargaPanganData(string $startDate, string $endDate): int
     {
         try {
             $regionCodes = $this->getRegionCodesFromCsv();
-            $allData = [];
+            $totalCount = 0;
 
             foreach ($regionCodes as $regionCode) {
                 Log::info("Fetching data for region {$regionCode} from {$startDate} to {$endDate}");
                 try {
                     $regionData = $this->fetchDataForRegion($regionCode, $startDate, $endDate);
-                    $allData = array_merge($allData, $regionData);
+                    $totalCount += count($regionData);
 
                     // Add small delay to avoid overwhelming external API
                     usleep(100000); // 0.1 second delay
@@ -46,7 +46,7 @@ class HargaPanganService
                 }
             }
 
-            return $allData;
+            return $totalCount;
         } catch (\Exception $e) {
             Log::error("Error in getHargaPanganData: " . $e->getMessage());
             throw $e;

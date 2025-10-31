@@ -18,7 +18,7 @@ class ProcessHargaPanganData implements ShouldQueue
      * Maximum seconds the job may run before timing out.
      * Ensure your worker --timeout is >= this value.
      */
-    public int $timeout = 7200; // 2 hours
+    public int $timeout = 93600; // 26 hours (slightly above 24 hours for safety)
 
     /**
      * Number of times the job may be attempted.

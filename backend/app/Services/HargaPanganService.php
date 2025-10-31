@@ -89,7 +89,7 @@ class HargaPanganService
         try {
             // Build URL with path parameters: /{startDate}/{endDate}/3/{kodeWilayah}
             $apiUrl = $this->externalApiUrl . '/' . $startDate . '/' . $endDate . '/3/' . $kodeWilayah;
-            Log::info("Calling external API: " . $apiUrl);
+            // Log::info("Calling external API: " . $apiUrl);
 
             $response = Http::timeout(30)
                 ->retry(1, 1000)
@@ -100,8 +100,9 @@ class HargaPanganService
                 ])
                 ->get($apiUrl);
 
-            if (!$response->successful()) {
-                throw new \Exception("External API returned status: " . $response->status() . " - " . $response->body());
+            if (!$response->successful() || !is_array($response->json())) {
+                // throw new \Exception("External API returned status: " . $response->status() . " - " . $response->body());
+                return [];
             }
 
             return $response->json();
@@ -211,73 +212,4 @@ class HargaPanganService
         }
     }
 
-    /**
-     * Create sample CSV file with region codes
-     */
-    public function createSampleCsvFile(): void
-    {
-        $sampleData = [
-            '# Kode Wilayah CSV File',
-            '# Each line should contain one region code',
-            '# Lines starting with # are comments',
-            '',
-            '1101', // Aceh Besar
-            '1102', // Aceh Barat
-            '1103', // Aceh Selatan
-            '1104', // Aceh Tengah
-            '1105', // Aceh Timur
-            '1106', // Aceh Tenggara
-            '1107', // Aceh Utara
-            '1108', // Aceh Barat Daya
-            '1109', // Aceh Singkil
-            '1110', // Aceh Selatan
-            '1111', // Aceh Tamiang
-            '1112', // Aceh Jaya
-            '1113', // Bener Meriah
-            '1114', // Bireuen
-            '1115', // Gayo Lues
-            '1116', // Nagan Raya
-            '1117', // Pidie
-            '1118', // Pidie Jaya
-            '1119', // Simeulue
-            '1120', // Subulussalam
-            '1121', // Aceh Tengah
-            '1122', // Aceh Utara
-            '1123', // Aceh Barat
-            '1124', // Aceh Selatan
-            '1125', // Aceh Tenggara
-            '1126', // Aceh Timur
-            '1127', // Aceh Barat Daya
-            '1128', // Aceh Singkil
-            '1129', // Aceh Selatan
-            '1130', // Aceh Tamiang
-        ];
-
-        Storage::put($this->csvFilePath, implode("\n", $sampleData));
-        Log::info("Created sample CSV file at: {$this->csvFilePath}");
-    }
-
-    /**
-     * Get data from database only (without calling external API)
-     */
-    public function getDataFromDatabase(string $startDate, string $endDate, ?string $kodeWilayah = null): array
-    {
-        return $this->hargaPanganRepository->getDataByDateRange($startDate, $endDate, $kodeWilayah);
-    }
-
-    /**
-     * Clear old data (optional cleanup method)
-     */
-    public function clearOldData(int $daysOld = 30): int
-    {
-        return $this->hargaPanganRepository->clearOldData($daysOld);
-    }
-
-    /**
-     * Test method to get region codes from CSV (for debugging)
-     */
-    public function testGetRegionCodes(): array
-    {
-        return $this->getRegionCodesFromCsv();
-    }
 }

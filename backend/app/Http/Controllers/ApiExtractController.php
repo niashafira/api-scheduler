@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Services\ApiExtractService;
 use App\Services\HargaPanganService;
+use App\Jobs\ProcessHargaPanganData;
 use App\Utils\ResponseTransformer;
 use App\Models\HargaPangan;
 use Illuminate\Http\Request;
@@ -295,18 +296,17 @@ class ApiExtractController extends Controller
             $startDate = $request->input('startDate');
             $endDate = $request->input('endDate');
 
-            // Use the service to get data count
-            $totalCount = $this->hargaPanganService->getHargaPanganData($startDate, $endDate);
+            // Dispatch async job so the HTTP request returns immediately
+            ProcessHargaPanganData::dispatch($startDate, $endDate);
 
             return response()->json([
                 'success' => true,
-                'count' => $totalCount,
+                'message' => 'Harga pangan processing started',
                 'filters' => [
                     'startDate' => $startDate,
                     'endDate' => $endDate
-                ],
-                'message' => 'Harga pangan data processed successfully'
-            ]);
+                ]
+            ], 202);
         } catch (ValidationException $e) {
             return response()->json([
                 'success' => false,

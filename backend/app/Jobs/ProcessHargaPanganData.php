@@ -27,14 +27,16 @@ class ProcessHargaPanganData implements ShouldQueue
 
     protected string $startDate;
     protected string $endDate;
+    protected ?string $kodeWilayah;
 
     /**
      * Create a new job instance.
      */
-    public function __construct(string $startDate, string $endDate)
+    public function __construct(string $startDate, string $endDate, ?string $kodeWilayah = null)
     {
         $this->startDate = $startDate;
         $this->endDate = $endDate;
+        $this->kodeWilayah = $kodeWilayah;
     }
 
     /**
@@ -42,14 +44,15 @@ class ProcessHargaPanganData implements ShouldQueue
      */
     public function handle(HargaPanganService $service): void
     {
-        Log::info("[ProcessHargaPanganData] Starting job for {$this->startDate} to {$this->endDate}");
+        Log::info("[ProcessHargaPanganData] Starting job for {$this->startDate} to {$this->endDate}" . ($this->kodeWilayah ? ", kode={$this->kodeWilayah}" : ''));
         try {
-            $count = $service->getHargaPanganData($this->startDate, $this->endDate);
+            $count = $service->getHargaPanganData($this->startDate, $this->endDate, $this->kodeWilayah);
             Log::info("[ProcessHargaPanganData] Completed. Records processed: {$count}");
         } catch (\Throwable $e) {
             Log::error('[ProcessHargaPanganData] Failed: ' . $e->getMessage(), [
                 'startDate' => $this->startDate,
                 'endDate' => $this->endDate,
+                'kodeWilayah' => $this->kodeWilayah,
                 'trace' => $e->getTraceAsString(),
             ]);
             throw $e;

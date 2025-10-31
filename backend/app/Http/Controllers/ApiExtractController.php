@@ -290,21 +290,24 @@ class ApiExtractController extends Controller
             // Validate required parameters
             $request->validate([
                 'startDate' => 'required|date',
-                'endDate' => 'required|date|after_or_equal:startDate'
+                'endDate' => 'required|date|after_or_equal:startDate',
+                'kodeWilayah' => 'sometimes|string'
             ]);
 
             $startDate = $request->input('startDate');
             $endDate = $request->input('endDate');
+            $kodeWilayah = $request->input('kodeWilayah');
 
             // Dispatch async job so the HTTP request returns immediately
-            ProcessHargaPanganData::dispatch($startDate, $endDate);
+            ProcessHargaPanganData::dispatch($startDate, $endDate, $kodeWilayah);
 
             return response()->json([
                 'success' => true,
                 'message' => 'Harga pangan processing started',
                 'filters' => [
                     'startDate' => $startDate,
-                    'endDate' => $endDate
+                    'endDate' => $endDate,
+                    'kodeWilayah' => $kodeWilayah
                 ]
             ], 202);
         } catch (ValidationException $e) {

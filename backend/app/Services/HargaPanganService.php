@@ -26,10 +26,10 @@ class HargaPanganService
     /**
      * Get harga pangan data by date range and region codes
      */
-    public function getHargaPanganData(string $startDate, string $endDate): int
+    public function getHargaPanganData(string $startDate, string $endDate, ?string $kodeWilayah = null): int
     {
         try {
-            $regionCodes = $this->getRegionCodesFromCsv();
+            $regionCodes = $kodeWilayah ? [$kodeWilayah] : $this->getRegionCodesFromCsv();
             $totalCount = 0;
 
             foreach ($regionCodes as $regionCode) {
@@ -63,6 +63,7 @@ class HargaPanganService
             $externalData = $this->callExternalApi($kodeWilayah, $startDate, $endDate);
 
             if (empty($externalData)) {
+                Log::info("No data returned for region {$kodeWilayah} between {$startDate} and {$endDate}");
                 return [];
             }
 
@@ -91,8 +92,8 @@ class HargaPanganService
             $apiUrl = $this->externalApiUrl . '/' . $startDate . '/' . $endDate . '/3/' . $kodeWilayah;
             // Log::info("Calling external API: " . $apiUrl);
 
-            $response = Http::timeout(30)
-                ->retry(1, 1000)
+            $response = Http::timeout(60)
+                ->retry(3, 2000)
                 ->withHeaders([
                     'X-Authorization' => config('services.harga_pangan.api_key'),
                     'Accept' => 'application/json',
@@ -100,12 +101,20 @@ class HargaPanganService
                 ])
                 ->get($apiUrl);
 
-            if (!$response->successful() || !is_array($response->json())) {
-                // throw new \Exception("External API returned status: " . $response->status() . " - " . $response->body());
+            if (!$response->successful()) {
+                $status = $response->status();
+                $bodySnippet = substr($response->body() ?? '', 0, 500);
+                Log::warning("External API non-success for region {$kodeWilayah} (status {$status}): {$bodySnippet}");
                 return [];
             }
 
-            return $response->json();
+            $json = $response->json();
+            if (!is_array($json)) {
+                Log::warning("External API returned non-array JSON for region {$kodeWilayah} (status {$response->status()})");
+                return [];
+            }
+
+            return $json;
         } catch (\Exception $e) {
             Log::error("External API call failed for region {$kodeWilayah}: " . $e->getMessage());
             // throw $e;

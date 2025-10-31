@@ -38,7 +38,7 @@ class HargaPanganService
                     $regionData = $this->fetchDataForRegion($regionCode, $startDate, $endDate);
                     $totalCount += count($regionData);
 
-                    // Add small delay to avoid overwhelming external API
+                    // Add delay to avoid overwhelming external API
                     sleep(5);
                 } catch (\Exception $e) {
                     Log::warning("Failed to fetch data for region {$regionCode}: " . $e->getMessage());

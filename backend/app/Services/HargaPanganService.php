@@ -14,6 +14,7 @@ class HargaPanganService
     protected $externalApiUrl;
     protected $csvFilePath;
     protected $hargaPanganRepository;
+    protected $logger;
 
     public function __construct(HargaPanganRepository $hargaPanganRepository)
     {
@@ -21,6 +22,8 @@ class HargaPanganService
         $this->externalApiUrl = config('services.harga_pangan.api_url');
         $this->csvFilePath = storage_path('app/private/data/csv/kode_wilayah.csv');
         $this->hargaPanganRepository = $hargaPanganRepository;
+        // Use dedicated log channel for harga pangan
+        $this->logger = Log::channel('harga_pangan');
     }
 
     /**
@@ -33,7 +36,7 @@ class HargaPanganService
             $totalCount = 0;
 
             foreach ($regionCodes as $regionCode) {
-                Log::info("Fetching data for region {$regionCode} from {$startDate} to {$endDate}");
+                $this->logger->info("Fetching data for region {$regionCode} from {$startDate} to {$endDate}");
                 try {
                     $regionData = $this->fetchDataForRegion($regionCode, $startDate, $endDate);
                     $totalCount += count($regionData);
@@ -41,14 +44,14 @@ class HargaPanganService
                     // Add delay to avoid overwhelming external API
                     sleep(2);
                 } catch (\Exception $e) {
-                    Log::warning("Failed to fetch data for region {$regionCode}: " . $e->getMessage());
+                    $this->logger->warning("Failed to fetch data for region {$regionCode}: " . $e->getMessage());
                     continue;
                 }
             }
 
             return $totalCount;
         } catch (\Exception $e) {
-            Log::error("Error in getHargaPanganData: " . $e->getMessage());
+            $this->logger->error("Error in getHargaPanganData: " . $e->getMessage());
             throw $e;
         }
     }
@@ -63,7 +66,7 @@ class HargaPanganService
             $externalData = $this->callExternalApi($kodeWilayah, $startDate, $endDate);
 
             if (empty($externalData)) {
-                Log::info("No data returned for region {$kodeWilayah} between {$startDate} and {$endDate}");
+                $this->logger->info("No data returned for region {$kodeWilayah} between {$startDate} and {$endDate}");
                 return [];
             }
 
@@ -77,7 +80,7 @@ class HargaPanganService
 
             return $transformedData;
         } catch (\Exception $e) {
-            Log::error("Error fetching data for region {$kodeWilayah}: " . $e->getMessage());
+            $this->logger->error("Error fetching data for region {$kodeWilayah}: " . $e->getMessage());
             throw $e;
         }
     }
@@ -90,7 +93,7 @@ class HargaPanganService
         try {
             // Build URL with path parameters: /{startDate}/{endDate}/3/{kodeWilayah}
             $apiUrl = $this->externalApiUrl . '/' . $startDate . '/' . $endDate . '/3/' . $kodeWilayah;
-            // Log::info("Calling external API: " . $apiUrl);
+            // $this->logger->info("Calling external API: " . $apiUrl);
 
             $response = Http::timeout(60)
                 ->retry(3, 2000)
@@ -104,19 +107,19 @@ class HargaPanganService
             if (!$response->successful()) {
                 $status = $response->status();
                 $bodySnippet = substr($response->body() ?? '', 0, 500);
-                Log::warning("External API non-success for region {$kodeWilayah} (status {$status}): {$bodySnippet}");
+                $this->logger->warning("External API non-success for region {$kodeWilayah} (status {$status}): {$bodySnippet}");
                 return [];
             }
 
             $json = $response->json();
             if (!is_array($json)) {
-                Log::warning("External API returned non-array JSON for region {$kodeWilayah} (status {$response->status()})");
+                $this->logger->warning("External API returned non-array JSON for region {$kodeWilayah} (status {$response->status()})");
                 return [];
             }
 
             return $json;
         } catch (\Exception $e) {
-            Log::error("External API call failed for region {$kodeWilayah}: " . $e->getMessage());
+            $this->logger->error("External API call failed for region {$kodeWilayah}: " . $e->getMessage());
             // throw $e;
             return [];
         }
@@ -131,7 +134,7 @@ class HargaPanganService
 
         // Check if the response has the expected structure
         if (!isset($externalData['success']) || !$externalData['success'] || !isset($externalData['data'])) {
-            Log::warning("Unexpected API response structure for region {$kodeWilayah}");
+            $this->logger->warning("Unexpected API response structure for region {$kodeWilayah}");
             return $transformedData;
         }
 
@@ -163,7 +166,7 @@ class HargaPanganService
             }
         }
 
-        Log::info("Transformed " . count($transformedData) . " records for region {$kodeWilayah}");
+        $this->logger->info("Transformed " . count($transformedData) . " records for region {$kodeWilayah}");
         return $transformedData;
     }
 
@@ -175,7 +178,7 @@ class HargaPanganService
     {
         try {
             if (!file_exists($this->csvFilePath)) {
-                Log::warning("CSV file not found: {$this->csvFilePath}");
+                $this->logger->warning("CSV file not found: {$this->csvFilePath}");
                 return [];
             }
 
@@ -213,10 +216,10 @@ class HargaPanganService
                 }
             }
 
-            Log::info("Loaded " . count($regionCodes) . " unique region codes from CSV");
+            $this->logger->info("Loaded " . count($regionCodes) . " unique region codes from CSV");
             return $regionCodes;
         } catch (\Exception $e) {
-            Log::error("Failed to read CSV file: " . $e->getMessage());
+            $this->logger->error("Failed to read CSV file: " . $e->getMessage());
             return [];
         }
     }

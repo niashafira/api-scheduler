@@ -20,10 +20,11 @@ Schedule::command('scheduler:monitor')
     ->withoutOverlapping();
 
 // Schedule harga pangan data fetch every 5 hours with today's date
-// Schedule::call(function () {
-//     $today = now()->format('Y-m-d');
-//     ProcessHargaPanganData::dispatch($today, $today);
-// })->everyFiveHours()
-//     ->withoutOverlapping()
-//     ->name('fetch-harga-pangan-daily')
-//     ->description('Fetch harga pangan data for today, runs every 5 hours');
+Schedule::call(function () {
+    $today = now()->format('Y-m-d');
+    ProcessHargaPanganData::dispatch($today, $today, "14.08");
+})
+    ->cron('0 */5 * * *') // every 5 hours
+    ->name('fetch-harga-pangan-daily')
+    ->withoutOverlapping()
+    ->description('Fetch harga pangan data for today, runs every 5 hours');

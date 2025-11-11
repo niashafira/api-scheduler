@@ -22,7 +22,7 @@ Schedule::command('scheduler:monitor')
 // Schedule harga pangan data fetch every 5 hours with today's date
 Schedule::call(function () {
     $today = now()->format('Y-m-d');
-    ProcessHargaPanganData::dispatch($today, $today, "14.08");
+    ProcessHargaPanganData::dispatch($today, $today);
 })
     ->cron('0 */5 * * *') // every 5 hours
     ->name('fetch-harga-pangan-daily')

@@ -39,5 +39,4 @@ return [
         'api_url' => env('HARGA_PANGAN_API_URL', 'https://webapi.badanpangan.go.id/api/panel-harga-pangan-v2/data-harian-provkabkota'),
         'api_key' => env('HARGA_PANGAN_API_KEY', 'jISkop4xnPYUl54GyKvCdHPnJkxw2n3l0EnXd8A2S7SQDbo7L2Dl6c8peXSwH3zu'),
     ],
-
 ];

@@ -60,6 +60,7 @@ Route::get('/api-extracts/request/{requestId}', [ApiExtractController::class, 'b
 Route::post('/api-extracts/{id}/mark-executed', [ApiExtractController::class, 'markAsExecuted']);
 Route::post('/api-extracts/{id}/test', [ApiExtractController::class, 'testExtraction']);
 Route::get('/api-extracts/custom/harga-pangan', [ApiExtractController::class, 'hargaPangan']);
+Route::get('/api-extracts/custom/harga-pangan-harian-produsen', [ApiExtractController::class, 'hargaPanganHarianProdusen']);
 Route::apiResource('api-extracts', ApiExtractController::class);
 
 // Destination Routes

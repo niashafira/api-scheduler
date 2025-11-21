@@ -135,6 +135,15 @@ return [
             'replace_placeholders' => true,
         ],
 
+        // Custom channel for harga pangan harian produsen
+        'harga_pangan_harian_produsen' => [
+            'driver' => 'daily',
+            'path' => storage_path('logs/harga-pangan-harian-produsen.log'),
+            'level' => env('LOG_LEVEL', 'debug'),
+            'days' => env('LOG_DAILY_DAYS', 14),
+            'replace_placeholders' => true,
+        ],
+
     ],
 
 ];

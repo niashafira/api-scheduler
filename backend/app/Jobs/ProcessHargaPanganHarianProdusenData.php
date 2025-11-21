@@ -2,7 +2,7 @@
 
 namespace App\Jobs;
 
-use App\Services\HargaPanganService;
+use App\Services\HargaPanganHarianProdusenService;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -10,7 +10,7 @@ use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Log;
 
-class ProcessHargaPanganData implements ShouldQueue
+class ProcessHargaPanganHarianProdusenData implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
@@ -42,16 +42,16 @@ class ProcessHargaPanganData implements ShouldQueue
     /**
      * Execute the job.
      */
-    public function handle(HargaPanganService $service): void
+    public function handle(HargaPanganHarianProdusenService $service): void
     {
-        // Use the same custom log channel as the service
-        $logger = Log::channel('harga_pangan');
-        $logger->info("[ProcessHargaPanganData] Starting job for {$this->startDate} to {$this->endDate}" . ($this->kodeWilayah ? ", kode={$this->kodeWilayah}" : ''));
+        // Use the dedicated log channel for harga pangan harian produsen
+        $logger = Log::channel('harga_pangan_harian_produsen');
+        $logger->info("[ProcessHargaPanganHarianProdusenData] Starting job for {$this->startDate} to {$this->endDate}" . ($this->kodeWilayah ? ", kode={$this->kodeWilayah}" : ''));
         try {
             $count = $service->getHargaPanganData($this->startDate, $this->endDate, $this->kodeWilayah);
-            $logger->info("[ProcessHargaPanganData] Completed. Records processed: {$count}");
+            $logger->info("[ProcessHargaPanganHarianProdusenData] Completed. Records processed: {$count}");
         } catch (\Throwable $e) {
-            $logger->error('[ProcessHargaPanganData] Failed: ' . $e->getMessage(), [
+            $logger->error('[ProcessHargaPanganHarianProdusenData] Failed: ' . $e->getMessage(), [
                 'startDate' => $this->startDate,
                 'endDate' => $this->endDate,
                 'kodeWilayah' => $this->kodeWilayah,

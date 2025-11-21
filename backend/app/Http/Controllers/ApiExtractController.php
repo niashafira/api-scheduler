@@ -5,11 +5,13 @@ namespace App\Http\Controllers;
 use App\Services\ApiExtractService;
 use App\Services\HargaPanganService;
 use App\Jobs\ProcessHargaPanganData;
+use App\Jobs\ProcessHargaPanganHarianProdusenData;
 use App\Utils\ResponseTransformer;
 use App\Models\HargaPangan;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Validation\ValidationException;
+use Illuminate\Support\Facades\Log;
 
 class ApiExtractController extends Controller
 {
@@ -298,6 +300,14 @@ class ApiExtractController extends Controller
             $endDate = $request->input('endDate');
             $kodeWilayah = $request->input('kodeWilayah');
 
+            // Log job dispatch to custom channel
+            Log::channel('harga_pangan')->info("[ApiExtractController] Dispatching ProcessHargaPanganData job", [
+                'startDate' => $startDate,
+                'endDate' => $endDate,
+                'kodeWilayah' => $kodeWilayah,
+                'queue_connection' => config('queue.default')
+            ]);
+
             // Dispatch async job so the HTTP request returns immediately
             ProcessHargaPanganData::dispatch($startDate, $endDate, $kodeWilayah);
 
@@ -320,6 +330,47 @@ class ApiExtractController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to retrieve harga pangan data',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function hargaPanganHarianProdusen(Request $request): JsonResponse
+    {
+        try {
+            // Validate required parameters
+            $request->validate([
+                'startDate' => 'required|date',
+                'endDate' => 'required|date|after_or_equal:startDate',
+                'kodeWilayah' => 'sometimes|string'
+            ]);
+
+            $startDate = $request->input('startDate');
+            $endDate = $request->input('endDate');
+            $kodeWilayah = $request->input('kodeWilayah');
+
+            // Dispatch async job so the HTTP request returns immediately
+            ProcessHargaPanganHarianProdusenData::dispatch($startDate, $endDate, $kodeWilayah);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Harga pangan harian produsen processing started',
+                'filters' => [
+                    'startDate' => $startDate,
+                    'endDate' => $endDate,
+                    'kodeWilayah' => $kodeWilayah
+                ]
+            ], 202);
+        } catch (ValidationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation failed',
+                'errors' => $e->errors()
+            ], 422);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to retrieve harga pangan harian produsen data',
                 'error' => $e->getMessage()
             ], 500);
         }

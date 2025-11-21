@@ -13,7 +13,7 @@ class HargaPanganHarianProdusenService
 {
     protected $externalApiUrl;
     protected $csvFilePath;
-    protected $hargaPanganRepository;
+    protected $hargaPanganHarianProdusenRepository;
     protected $logger;
 
     public function __construct(HargaPanganHarianProdusenRepository $hargaPanganHarianProdusenRepository)
@@ -21,7 +21,7 @@ class HargaPanganHarianProdusenService
         // Configure external API URL
         $this->externalApiUrl = config('services.harga_pangan.api_url');
         $this->csvFilePath = storage_path('app/private/data/csv/kode_wilayah.csv');
-        $this->hargaPanganHarianProdusenRepository = $harga PanganHarianProdusenRepository;
+        $this->hargaPanganHarianProdusenRepository = $hargaPanganHarianProdusenRepository;
         // Use dedicated log channel for harga pangan
         $this->logger = Log::channel('harga_pangan_harian_produsen');
     }

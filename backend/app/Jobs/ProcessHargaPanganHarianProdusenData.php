@@ -48,7 +48,7 @@ class ProcessHargaPanganHarianProdusenData implements ShouldQueue
         $logger = Log::channel('harga_pangan_harian_produsen');
         $logger->info("[ProcessHargaPanganHarianProdusenData] Starting job for {$this->startDate} to {$this->endDate}" . ($this->kodeWilayah ? ", kode={$this->kodeWilayah}" : ''));
         try {
-            $count = $service->getHargaPanganData($this->startDate, $this->endDate, $this->kodeWilayah);
+            $count = $service->getHargaPanganHarianProdusenData($this->startDate, $this->endDate, $this->kodeWilayah);
             $logger->info("[ProcessHargaPanganHarianProdusenData] Completed. Records processed: {$count}");
         } catch (\Throwable $e) {
             $logger->error('[ProcessHargaPanganHarianProdusenData] Failed: ' . $e->getMessage(), [

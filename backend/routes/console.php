@@ -1,6 +1,7 @@
 <?php
 
 use App\Jobs\ProcessHargaPanganData;
+use App\Jobs\ProcessHargaPanganHarianProdusenData;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Schedule;
@@ -28,3 +29,13 @@ Schedule::call(function () {
     ->name('fetch-harga-pangan-daily')
     ->withoutOverlapping()
     ->description('Fetch harga pangan data for today, runs every 5 hours');
+
+// Schedule harga pangan harian produsen data fetch every 5 hours with today's date
+Schedule::call(function () {
+    $today = now()->format('Y-m-d');
+    ProcessHargaPanganHarianProdusenData::dispatch($today, $today);
+})
+    ->cron('0 */5 * * *') // every 5 hours
+    ->name('fetch-harga-pangan-harian-produsen-daily')
+    ->withoutOverlapping()
+    ->description('Fetch harga pangan harian produsen data for today, runs every 5 hours');

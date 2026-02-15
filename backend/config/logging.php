@@ -144,6 +144,15 @@ return [
             'replace_placeholders' => true,
         ],
 
+        // Custom channel for BGN penerima manfaat
+        'bgn_penerima_manfaat' => [
+            'driver' => 'daily',
+            'path' => storage_path('logs/bgn-penerima-manfaat.log'),
+            'level' => env('LOG_LEVEL', 'debug'),
+            'days' => env('LOG_DAILY_DAYS', 14),
+            'replace_placeholders' => true,
+        ],
+
     ],
 
 ];

@@ -7,6 +7,7 @@ use App\Http\Controllers\ApiRequestController;
 use App\Http\Controllers\ApiExtractController;
 use App\Http\Controllers\DestinationController;
 use App\Http\Controllers\ScheduleController;
+use App\Http\Controllers\BgnPenerimaManfaatController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -72,3 +73,8 @@ Route::get('/schedules/cron', [ScheduleController::class, 'getCron']);
 Route::get('/schedules/source/{sourceId}', [ScheduleController::class, 'getBySource']);
 Route::post('/schedules/{id}/execute', [ScheduleController::class, 'execute']);
 Route::apiResource('schedules', ScheduleController::class);
+
+// BGN Penerima Manfaat Routes
+Route::post('/bgn-penerima-manfaat/fetch', [BgnPenerimaManfaatController::class, 'fetchAndStore']);
+Route::get('/bgn-penerima-manfaat', [BgnPenerimaManfaatController::class, 'index']);
+Route::get('/bgn-penerima-manfaat/{kodeKabko}', [BgnPenerimaManfaatController::class, 'show']);

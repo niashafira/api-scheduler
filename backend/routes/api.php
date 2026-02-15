@@ -8,6 +8,7 @@ use App\Http\Controllers\ApiExtractController;
 use App\Http\Controllers\DestinationController;
 use App\Http\Controllers\ScheduleController;
 use App\Http\Controllers\BgnPenerimaManfaatController;
+use App\Http\Controllers\BgnSppgController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -78,3 +79,7 @@ Route::apiResource('schedules', ScheduleController::class);
 Route::post('/bgn-penerima-manfaat/fetch', [BgnPenerimaManfaatController::class, 'fetchAndStore']);
 Route::get('/bgn-penerima-manfaat', [BgnPenerimaManfaatController::class, 'index']);
 Route::get('/bgn-penerima-manfaat/{kodeKabko}', [BgnPenerimaManfaatController::class, 'show']);
+
+// BGN SPPG Routes
+Route::post('/bgn-sppg/fetch', [BgnSppgController::class, 'fetchAndStore']);
+Route::get('/bgn-sppg', [BgnSppgController::class, 'index']);

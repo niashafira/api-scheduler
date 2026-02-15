@@ -153,6 +153,15 @@ return [
             'replace_placeholders' => true,
         ],
 
+        // Custom channel for BGN SPPG
+        'bgn_sppg' => [
+            'driver' => 'daily',
+            'path' => storage_path('logs/bgn-sppg.log'),
+            'level' => env('LOG_LEVEL', 'debug'),
+            'days' => env('LOG_DAILY_DAYS', 14),
+            'replace_placeholders' => true,
+        ],
+
     ],
 
 ];

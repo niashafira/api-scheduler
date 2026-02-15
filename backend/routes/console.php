@@ -3,7 +3,9 @@
 use App\Jobs\ProcessHargaPanganData;
 use App\Jobs\ProcessHargaPanganHarianProdusenData;
 use App\Jobs\ProcessBgnPenerimaManfaatData;
+use App\Jobs\ProcessBgnSppgData;
 use App\Models\BgnPenerimaManfaat;
+use App\Models\BgnSppg;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Schedule;
@@ -70,3 +72,32 @@ Schedule::call(function () {
         return BgnPenerimaManfaat::exists();
     })
     ->description('First run check for BGN penerima manfaat - runs immediately on deployment if no data exists');
+
+// Schedule BGN SPPG data fetch monthly (1st of each month at 00:00)
+Schedule::call(function () {
+    \Log::info('[BGN SPPG] Monthly scheduled run');
+    ProcessBgnSppgData::dispatch();
+})
+    ->monthlyOn(1, '00:00') // 1st of each month at 00:00
+    ->name('fetch-bgn-sppg-monthly')
+    ->withoutOverlapping()
+    ->description('Fetch BGN SPPG data monthly on the 1st of each month');
+
+// Run immediately on first deployment if no data exists
+// This check runs every minute but only dispatches once if no data exists
+Schedule::call(function () {
+    $hasData = BgnSppg::exists();
+    
+    if (!$hasData) {
+        \Log::info('[BGN SPPG] First deployment detected - executing immediately');
+        ProcessBgnSppgData::dispatch();
+    }
+})
+    ->everyMinute()
+    ->name('fetch-bgn-sppg-first-run')
+    ->withoutOverlapping()
+    ->skip(function () {
+        // Skip if data already exists (first run completed)
+        return BgnSppg::exists();
+    })
+    ->description('First run check for BGN SPPG - runs immediately on deployment if no data exists');

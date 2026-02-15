@@ -2,6 +2,8 @@
 
 use App\Jobs\ProcessHargaPanganData;
 use App\Jobs\ProcessHargaPanganHarianProdusenData;
+use App\Jobs\ProcessBgnPenerimaManfaatData;
+use App\Models\BgnPenerimaManfaat;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Schedule;
@@ -39,3 +41,32 @@ Schedule::call(function () {
     ->name('fetch-harga-pangan-harian-produsen-daily')
     ->withoutOverlapping()
     ->description('Fetch harga pangan harian produsen data for today, runs every 5 hours');
+
+// Schedule BGN penerima manfaat data fetch monthly (1st of each month at 00:00)
+Schedule::call(function () {
+    \Log::info('[BGN Penerima Manfaat] Monthly scheduled run');
+    ProcessBgnPenerimaManfaatData::dispatch();
+})
+    ->monthlyOn(1, '00:00') // 1st of each month at 00:00
+    ->name('fetch-bgn-penerima-manfaat-monthly')
+    ->withoutOverlapping()
+    ->description('Fetch BGN penerima manfaat data monthly on the 1st of each month');
+
+// Run immediately on first deployment if no data exists
+// This check runs every minute but only dispatches once if no data exists
+Schedule::call(function () {
+    $hasData = BgnPenerimaManfaat::exists();
+    
+    if (!$hasData) {
+        \Log::info('[BGN Penerima Manfaat] First deployment detected - executing immediately');
+        ProcessBgnPenerimaManfaatData::dispatch();
+    }
+})
+    ->everyMinute()
+    ->name('fetch-bgn-penerima-manfaat-first-run')
+    ->withoutOverlapping()
+    ->skip(function () {
+        // Skip if data already exists (first run completed)
+        return BgnPenerimaManfaat::exists();
+    })
+    ->description('First run check for BGN penerima manfaat - runs immediately on deployment if no data exists');

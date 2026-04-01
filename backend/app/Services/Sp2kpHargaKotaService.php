@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Logging\Sp2kpHargaKotaLogger;
 use App\Repositories\Sp2kpHargaKotaRepository;
 use Illuminate\Http\Client\PendingRequest;
+use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\Http;
 
 class Sp2kpHargaKotaService
@@ -38,6 +39,9 @@ class Sp2kpHargaKotaService
 
     protected int $emptyResponseSamplesLogged = 0;
 
+    /** Log full getHargaKota diagnostics for the first N provinces per pool run. */
+    protected int $getHargaKotaDetailLogsRemaining = 0;
+
     protected ?string $accessToken = null;
 
     protected float $tokenExpiresAt = 0.0;
@@ -55,6 +59,7 @@ class Sp2kpHargaKotaService
         $this->xApiKey = (string) ($cfg['x_api_key'] ?? '');
         $this->httpVerifySsl = filter_var($cfg['http_verify_ssl'] ?? true, FILTER_VALIDATE_BOOLEAN);
         $this->rateLimitPerMinute = max(1, (int) ($cfg['rate_limit_per_minute'] ?? 10));
+        $this->apiAuthorization = strtolower((string) ($cfg['api_authorization'] ?? 'bearer'));
         $this->provinsiIdsPath = storage_path('app/private/data/json/provinsi_ids.json');
     }
 
@@ -68,6 +73,7 @@ class Sp2kpHargaKotaService
         $this->accessToken = null;
         $this->tokenExpiresAt = 0.0;
         $this->emptyResponseSamplesLogged = 0;
+        $this->getHargaKotaDetailLogsRemaining = max(0, (int) config('services.sp2kp.diagnostic_request_logs', 15));
 
         $provinsiIds = $this->loadProvinsiIdsFromJson();
         if ($provinsiIds === []) {
@@ -85,6 +91,10 @@ class Sp2kpHargaKotaService
         $this->logger->info('[Sp2kpHargaKotaService] Pool start', [
             'tgl' => $tgl,
             'provinsi_count' => $totalProvinsi,
+            'data_url' => $this->dataUrl,
+            'api_authorization' => $this->apiAuthorization,
+            'token_present_after_oauth' => $this->accessToken !== null && $this->accessToken !== '',
+            'diagnostic_requests_to_log' => $this->getHargaKotaDetailLogsRemaining,
         ]);
 
         foreach ($provinsiIds as $provinsiId) {
@@ -102,13 +112,23 @@ class Sp2kpHargaKotaService
                     continue;
                 }
 
+                $mapped = array_map(fn (array $row) => $this->mapApiRowToRecord($row, $tgl), $rows);
                 $records = array_values(array_filter(
-                    array_map(fn (array $row) => $this->mapApiRowToRecord($row, $tgl), $rows),
+                    $mapped,
                     fn (array $r) => $r['kode_provinsi'] !== ''
                         && $r['kode_kabupaten'] !== ''
                         && $r['kode_group_komoditas'] !== ''
                         && $r['kode_commodity'] !== ''
                 ));
+                if ($records === [] && $rows !== []) {
+                    $sampleRaw = $rows[0];
+                    $sampleMapped = $mapped[0] ?? [];
+                    $this->logger->warning('[Sp2kpHargaKotaService] Parsed rows but all dropped by field validation', [
+                        'provinsi_id' => $provinsiId,
+                        'raw_row_keys' => is_array($sampleRaw) ? array_keys($sampleRaw) : [],
+                        'sample_mapped' => $sampleMapped,
+                    ]);
+                }
                 if ($records === []) {
                     continue;
                 }
@@ -284,6 +304,11 @@ class Sp2kpHargaKotaService
             return $this->performHargaKotaRequest($provinsiId, $tgl, $allowAuthRetry, false);
         }
 
+        $decoded = $response->json();
+        $rows = $response->successful() ? $this->normalizeHargaRows($decoded) : [];
+
+        $this->maybeLogGetHargaKotaDiagnostics($provinsiId, $tgl, $response, $decoded, count($rows));
+
         if (! $response->successful()) {
             $this->logger->warning('[Sp2kpHargaKotaService] HTTP '.$response->status().' for provinsi_id='.$provinsiId, [
                 'body' => $response->body(),
@@ -292,20 +317,64 @@ class Sp2kpHargaKotaService
             return [];
         }
 
-        $decoded = $response->json();
-        $rows = $this->normalizeHargaRows($decoded);
-        if ($rows === [] && $this->emptyResponseSamplesLogged < 3) {
+        if ($rows === [] && $this->emptyResponseSamplesLogged < 10) {
             $this->emptyResponseSamplesLogged++;
             $preview = $response->body();
-            $this->logger->warning('[Sp2kpHargaKotaService] OK response but no rows parsed (check API JSON shape or tgl)', [
+            $this->logger->warning('[Sp2kpHargaKotaService] OK HTTP but zero rows after parse (empty data[] or wrong shape?)', [
                 'provinsi_id' => $provinsiId,
                 'tgl' => $tgl,
                 'top_keys' => is_array($decoded) ? array_keys($decoded) : null,
-                'body_preview' => mb_strlen($preview) > 1200 ? mb_substr($preview, 0, 1200).'…' : $preview,
+                'body_preview' => strlen($preview) > 2000 ? substr($preview, 0, 2000).'…' : $preview,
             ]);
         }
 
         return $rows;
+    }
+
+    /**
+     * Verbose diagnostics for the first {@see getHargaKotaDetailLogsRemaining} responses each run.
+     */
+    protected function maybeLogGetHargaKotaDiagnostics(
+        string $provinsiId,
+        string $tgl,
+        Response $response,
+        mixed $decoded,
+        int $normalizedRowCount
+    ): void {
+        if ($this->getHargaKotaDetailLogsRemaining <= 0) {
+            return;
+        }
+
+        $this->getHargaKotaDetailLogsRemaining--;
+
+        $body = $response->body();
+        $payload = [
+            'provinsi_id' => $provinsiId,
+            'form_tgl' => $tgl,
+            'http_status' => $response->status(),
+            'client_successful' => $response->successful(),
+            'body_length' => strlen($body),
+            'normalized_row_count' => $normalizedRowCount,
+        ];
+
+        if (is_array($decoded)) {
+            $payload['json_top_keys'] = array_keys($decoded);
+            $payload['api_kode'] = $decoded['kode'] ?? null;
+            $payload['api_keterangan'] = $decoded['keterangan'] ?? null;
+            if (array_key_exists('data', $decoded)) {
+                $d = $decoded['data'];
+                $payload['data_php_type'] = gettype($d);
+                if (is_array($d)) {
+                    $payload['data_element_count'] = count($d);
+                    $payload['data_is_list'] = array_is_list($d);
+                }
+            }
+        } else {
+            $payload['json_decode_type'] = $decoded === null ? 'null' : gettype($decoded);
+            $payload['body_preview_non_json'] = strlen($body) > 800 ? substr($body, 0, 800).'…' : $body;
+        }
+
+        $this->logger->info('[Sp2kpHargaKotaService] getHargaKota response detail', $payload);
     }
 
     protected function hargaKotaHttpClient(): PendingRequest

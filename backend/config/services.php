@@ -75,5 +75,7 @@ return [
         'api_authorization' => 'bearer',
         'http_verify_ssl' => true,
         'rate_limit_per_minute' => 10,
+        // First N getHargaKota calls per pool: log full HTTP/JSON diagnostics (0 = off).
+        'diagnostic_request_logs' => 15,
     ],
 ];

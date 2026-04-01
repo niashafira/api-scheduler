@@ -10,6 +10,7 @@ use App\Repositories\ApiRequestRepository;
 use App\Repositories\ApiExtractRepository;
 use App\Repositories\HargaPanganRepository;
 use App\Repositories\NeracaPanganKabKotaRepository;
+use App\Repositories\Sp2kpHargaKotaRepository;
 use App\Repositories\Interfaces\ApiSourceRepositoryInterface;
 use App\Services\TokenConfigService;
 use App\Services\ApiSourceService;
@@ -17,6 +18,7 @@ use App\Services\ApiRequestService;
 use App\Services\ApiExtractService;
 use App\Services\HargaPanganService;
 use App\Services\NeracaPanganKabKotaService;
+use App\Services\Sp2kpHargaKotaService;
 use Illuminate\Support\ServiceProvider;
 
 class RepositoryServiceProvider extends ServiceProvider
@@ -48,6 +50,8 @@ class RepositoryServiceProvider extends ServiceProvider
         $this->app->bind(HargaPanganService::class);
         $this->app->bind(NeracaPanganKabKotaRepository::class);
         $this->app->bind(NeracaPanganKabKotaService::class);
+        $this->app->bind(Sp2kpHargaKotaRepository::class);
+        $this->app->bind(Sp2kpHargaKotaService::class);
     }
 
     /**

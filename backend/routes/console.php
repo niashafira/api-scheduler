@@ -5,6 +5,7 @@ use App\Jobs\ProcessHargaPanganHarianProdusenData;
 use App\Jobs\ProcessBgnPenerimaManfaatData;
 use App\Jobs\ProcessBgnSppgData;
 use App\Jobs\ProcessNeracaPanganKabKotaData;
+use App\Jobs\ProcessSp2kpHargaKotaData;
 use App\Models\BgnPenerimaManfaat;
 use App\Models\BgnSppg;
 use App\Models\NeracaPanganKabKota;
@@ -134,3 +135,14 @@ Schedule::call(function () {
         return NeracaPanganKabKota::exists();
     })
     ->description('First run check for neraca pangan kab/kota - runs immediately on deployment if no data exists');
+
+// SP2KP Harga Kota: every 7 hours with today's date (tgl)
+Schedule::call(function () {
+    $today = now()->format('Y-m-d');
+    Log::channel('sp2kp_harga_kota')->info("[SP2KP Harga Kota] Scheduled run for tgl {$today}");
+    ProcessSp2kpHargaKotaData::dispatch($today);
+})
+    ->cron('0 */7 * * *')
+    ->name('fetch-sp2kp-harga-kota')
+    ->withoutOverlapping()
+    ->description('Fetch SP2KP harga kota for today, runs every 7 hours');

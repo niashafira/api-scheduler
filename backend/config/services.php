@@ -60,4 +60,18 @@ return [
         'password' => env('BGN_PASSWORD', 'K0xejsfd9328qu4=3BK'),
         'auth_token' => env('BGN_AUTH_TOKEN', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhcGlfY2xpZW50X2lkIjoiNmI3MGFkNTAtZmNkNy00ODdkLWFkNzktMzI4MWI0MGY0ZjA0IiwidXNlcm5hbWUiOiJwdXNkYXRpbl9iYXBhbmFzIiwiZ3JvdXBfaWQiOiIiLCJ0eXAiOiJhcGlfY2xpZW50IiwiZXhwIjoxNzcxMTMyNTgyLCJpYXQiOjE3NzExMjg5ODJ9.ogW9TwtcutgZ74hmCRsChqDcJsh9SwOaVCjAY7BbNLE'),
     ],
+
+    /*
+    | SPLP / SP2KP Harga Kota (oauth + getHargaKota). Adjust credentials in this file as needed.
+    */
+    'sp2kp' => [
+        'oauth_url' => 'https://splp.layanan.go.id/oauth2/token',
+        'data_url' => 'https://api-splp.layanan.go.id/komoditi/1.0/getHargaKota',
+        'oauth_username' => 'badanpangan_splp',
+        'oauth_password' => 'panganSPLP@123',
+        'oauth_basic_base64' => 'Wmk3WkxyVXJFYTI5QXZ6QWRjc0pEdDdpWFdjYTpnZ1FzbWpnbDFQRXVmV0FkcU5OZG1GM1lmeU1h',
+        'x_api_key' => '7as7SbY5t1ct9geKgF2aj0tEnkoZDRZCPIl13B6t',
+        'http_verify_ssl' => true,
+        'rate_limit_per_minute' => 10,
+    ],
 ];

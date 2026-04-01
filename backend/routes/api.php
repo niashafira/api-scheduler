@@ -10,6 +10,7 @@ use App\Http\Controllers\ScheduleController;
 use App\Http\Controllers\BgnPenerimaManfaatController;
 use App\Http\Controllers\BgnSppgController;
 use App\Http\Controllers\NeracaPanganKabKotaController;
+use App\Http\Controllers\Sp2kpHargaKotaController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -87,3 +88,6 @@ Route::get('/bgn-sppg', [BgnSppgController::class, 'index']);
 
 // Neraca pangan kab/kota (proyek neraca pangan)
 Route::post('/neraca-pangan-kab-kota/pool', [NeracaPanganKabKotaController::class, 'pool']);
+
+// SP2KP Harga Kota (SPLP)
+Route::post('/sp2kp-harga-kota/pool', [Sp2kpHargaKotaController::class, 'pool']);

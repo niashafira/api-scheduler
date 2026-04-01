@@ -171,6 +171,15 @@ return [
             'replace_placeholders' => true,
         ],
 
+        // SP2KP Harga Kota (SPLP)
+        'sp2kp_harga_kota' => [
+            'driver' => 'daily',
+            'path' => storage_path('logs/sp2kp-harga-kota.log'),
+            'level' => env('LOG_LEVEL', 'debug'),
+            'days' => env('LOG_DAILY_DAYS', 14),
+            'replace_placeholders' => true,
+        ],
+
     ],
 
 ];

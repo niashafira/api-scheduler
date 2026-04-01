@@ -40,6 +40,16 @@ return [
         'api_key' => env('HARGA_PANGAN_API_KEY', 'jISkop4xnPYUl54GyKvCdHPnJkxw2n3l0EnXd8A2S7SQDbo7L2Dl6c8peXSwH3zu'),
     ],
 
+    'neraca_pangan' => [
+        // env() returns '' if .env sets empty string — use ?: so the base URL is never missing
+        'api_url' => trim((string) env('NERACA_PANGAN_API_URL', '')) ?: 'https://proyeksineracapangan.badanpangan.go.id/api/summary',
+        'api_key' => trim((string) env('NERACA_PANGAN_API_KEY', '')) ?: 'sAxriNG5PHhgM2lJTSaZXv2X9Rxghe3Ai5IjuGm1tfFsKzuXgh6vRR7vsOHuyjBy',
+        // cURL 60 on Windows: unset/blank NERACA_PANGAN_HTTP_VERIFY => verify only when APP_ENV is production.
+        'http_verify_ssl' => env('NERACA_PANGAN_HTTP_VERIFY') !== null && trim((string) env('NERACA_PANGAN_HTTP_VERIFY')) !== ''
+            ? filter_var(env('NERACA_PANGAN_HTTP_VERIFY'), FILTER_VALIDATE_BOOLEAN)
+            : env('APP_ENV') === 'production',
+    ],
+
     'bgn' => [
         'api_url' => env('BGN_API_URL', 'https://devapi.bgn.go.id'),
         'username' => env('BGN_USERNAME', 'pusdatin_bapanas'),

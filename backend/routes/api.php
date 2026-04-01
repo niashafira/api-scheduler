@@ -9,6 +9,7 @@ use App\Http\Controllers\DestinationController;
 use App\Http\Controllers\ScheduleController;
 use App\Http\Controllers\BgnPenerimaManfaatController;
 use App\Http\Controllers\BgnSppgController;
+use App\Http\Controllers\NeracaPanganKabKotaController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -83,3 +84,6 @@ Route::get('/bgn-penerima-manfaat/{kodeKabko}', [BgnPenerimaManfaatController::c
 // BGN SPPG Routes
 Route::post('/bgn-sppg/fetch', [BgnSppgController::class, 'fetchAndStore']);
 Route::get('/bgn-sppg', [BgnSppgController::class, 'index']);
+
+// Neraca pangan kab/kota (proyek neraca pangan)
+Route::post('/neraca-pangan-kab-kota/pool', [NeracaPanganKabKotaController::class, 'pool']);

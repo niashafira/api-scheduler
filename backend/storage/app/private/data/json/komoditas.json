@@ -1,0 +1,16 @@
+{
+  "komoditas": [
+    { "id": 1, "nama": "Beras", "slug": "beras" },
+    { "id": 2, "nama": "Jagung", "slug": "jagung" },
+    { "id": 3, "nama": "Kedelai", "slug": "kedelai" },
+    { "id": 4, "nama": "Bawang Merah", "slug": "bawang-merah" },
+    { "id": 5, "nama": "Bawang Putih", "slug": "bawang-putih" },
+    { "id": 6, "nama": "Cabai Besar", "slug": "cabai-besar" },
+    { "id": 7, "nama": "Cabai Rawit", "slug": "cabai-rawit" },
+    { "id": 8, "nama": "Daging Sapi / Kerbau", "slug": "daging-sapi---kerbau" },
+    { "id": 9, "nama": "Daging Ayam Ras", "slug": "daging-ayam-ras" },
+    { "id": 10, "nama": "Telur Ayam Ras", "slug": "telur-ayam-ras" },
+    { "id": 11, "nama": "Gula Pasir", "slug": "gula-pasir" },
+    { "id": 12, "nama": "Minyak Goreng", "slug": "minyak-goreng" }
+  ]
+}

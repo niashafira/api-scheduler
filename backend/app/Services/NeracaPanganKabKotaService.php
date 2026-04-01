@@ -162,6 +162,11 @@ class NeracaPanganKabKotaService
      */
     protected function fetchSummaryForProvinsi(string $provinsiId, string $periodeAwal, string $periodeAkhir, int $komoditasId): array
     {
+        if ($this->apiKey === '') {
+            $this->logger->error('[NeracaPanganKabKotaService] API key is empty. Check NERACA_PANGAN_API_KEY and config cache/queue worker restart.');
+            return [];
+        }
+
         $request = Http::timeout(120)
             ->retry(3, 2000)
             ->withHeaders([
@@ -183,7 +188,10 @@ class NeracaPanganKabKotaService
         ]);
 
         if (!$response->successful()) {
-            $this->logger->warning('[NeracaPanganKabKotaService] HTTP ' . $response->status() . ' for provinsi_id=' . $provinsiId . ', komoditas_id=' . $komoditasId);
+            $this->logger->warning('[NeracaPanganKabKotaService] HTTP ' . $response->status() . ' for provinsi_id=' . $provinsiId . ', komoditas_id=' . $komoditasId, [
+                'api_key_present' => $this->apiKey !== '',
+                'url' => $this->summaryApiUrl,
+            ]);
 
             return [];
         }

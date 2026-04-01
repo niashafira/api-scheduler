@@ -2,8 +2,8 @@
 
 namespace App\Repositories;
 
+use App\Logging\Sp2kpHargaKotaLogger;
 use App\Models\Sp2kpHargaKota;
-use Illuminate\Support\Facades\Log;
 
 class Sp2kpHargaKotaRepository
 {
@@ -36,7 +36,7 @@ class Sp2kpHargaKotaRepository
                 );
             }
         } catch (\Exception $e) {
-            Log::channel('sp2kp_harga_kota')->error('Failed to upsert sp2kp_harga_kota: '.$e->getMessage());
+            Sp2kpHargaKotaLogger::logger()->error('Failed to upsert sp2kp_harga_kota: '.$e->getMessage());
             throw $e;
         }
     }

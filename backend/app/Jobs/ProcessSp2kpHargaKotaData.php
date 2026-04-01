@@ -2,13 +2,13 @@
 
 namespace App\Jobs;
 
+use App\Logging\Sp2kpHargaKotaLogger;
 use App\Services\Sp2kpHargaKotaService;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
-use Illuminate\Support\Facades\Log;
 
 class ProcessSp2kpHargaKotaData implements ShouldQueue
 {
@@ -31,7 +31,7 @@ class ProcessSp2kpHargaKotaData implements ShouldQueue
     public function handle(Sp2kpHargaKotaService $service): void
     {
         $startedAt = microtime(true);
-        $logger = Log::channel('sp2kp_harga_kota');
+        $logger = Sp2kpHargaKotaLogger::logger();
         $logger->info('[ProcessSp2kpHargaKotaData] START', [
             'tgl' => $this->tgl,
         ]);

@@ -2,10 +2,10 @@
 
 namespace App\Services;
 
+use App\Logging\Sp2kpHargaKotaLogger;
 use App\Repositories\Sp2kpHargaKotaRepository;
 use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Support\Facades\Http;
-use Illuminate\Support\Facades\Log;
 
 class Sp2kpHargaKotaService
 {
@@ -41,7 +41,7 @@ class Sp2kpHargaKotaService
     public function __construct(Sp2kpHargaKotaRepository $repository)
     {
         $this->repository = $repository;
-        $this->logger = Log::channel('sp2kp_harga_kota');
+        $this->logger = Sp2kpHargaKotaLogger::logger();
         $cfg = config('services.sp2kp', []);
         $this->oauthUrl = (string) ($cfg['oauth_url'] ?? 'https://splp.layanan.go.id/oauth2/token');
         $this->dataUrl = (string) ($cfg['data_url'] ?? 'https://api-splp.layanan.go.id/komoditi/1.0/getHargaKota');
@@ -306,7 +306,6 @@ class Sp2kpHargaKotaService
     }
 
     /**
-     * @param  mixed  $json
      * @return list<array<string, mixed>>
      */
     protected function normalizeHargaRows(mixed $json): array

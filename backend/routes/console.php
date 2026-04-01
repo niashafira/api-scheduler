@@ -6,6 +6,7 @@ use App\Jobs\ProcessBgnPenerimaManfaatData;
 use App\Jobs\ProcessBgnSppgData;
 use App\Jobs\ProcessNeracaPanganKabKotaData;
 use App\Jobs\ProcessSp2kpHargaKotaData;
+use App\Logging\Sp2kpHargaKotaLogger;
 use App\Models\BgnPenerimaManfaat;
 use App\Models\BgnSppg;
 use App\Models\NeracaPanganKabKota;
@@ -139,7 +140,7 @@ Schedule::call(function () {
 // SP2KP Harga Kota: every 7 hours with today's date (tgl)
 Schedule::call(function () {
     $today = now()->format('Y-m-d');
-    Log::channel('sp2kp_harga_kota')->info("[SP2KP Harga Kota] Scheduled run for tgl {$today}");
+    Sp2kpHargaKotaLogger::logger()->info("[SP2KP Harga Kota] Scheduled run for tgl {$today}");
     ProcessSp2kpHargaKotaData::dispatch($today);
 })
     ->cron('0 */7 * * *')

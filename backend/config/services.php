@@ -71,6 +71,8 @@ return [
         'oauth_password' => 'panganSPLP@123',
         'oauth_basic_base64' => 'Wmk3WkxyVXJFYTI5QXZ6QWRjc0pEdDdpWFdjYTpnZ1FzbWpnbDFQRXVmV0FkcU5OZG1GM1lmeU1h',
         'x_api_key' => '7as7SbY5t1ct9geKgF2aj0tEnkoZDRZCPIl13B6t',
+        // getHargaKota: use "bearer" (Authorization: Bearer <token>) or "token" (raw access_token only).
+        'api_authorization' => 'bearer',
         'http_verify_ssl' => true,
         'rate_limit_per_minute' => 10,
     ],

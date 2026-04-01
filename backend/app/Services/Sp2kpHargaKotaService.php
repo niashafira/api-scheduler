@@ -29,10 +29,14 @@ class Sp2kpHargaKotaService
 
     protected int $rateLimitPerMinute;
 
+    protected string $apiAuthorization;
+
     protected string $provinsiIdsPath;
 
     /** @var list<float> */
     protected array $requestTimestamps = [];
+
+    protected int $emptyResponseSamplesLogged = 0;
 
     protected ?string $accessToken = null;
 
@@ -63,6 +67,7 @@ class Sp2kpHargaKotaService
         $this->requestTimestamps = [];
         $this->accessToken = null;
         $this->tokenExpiresAt = 0.0;
+        $this->emptyResponseSamplesLogged = 0;
 
         $provinsiIds = $this->loadProvinsiIdsFromJson();
         if ($provinsiIds === []) {
@@ -258,17 +263,7 @@ class Sp2kpHargaKotaService
      */
     protected function performHargaKotaRequest(string $provinsiId, string $tgl, bool $allowAuthRetry, bool $allow429Retry): array
     {
-        $request = Http::timeout(120)
-            ->asForm()
-            ->withToken((string) $this->accessToken)
-            ->withHeaders([
-                'x-api-key' => $this->xApiKey,
-                'Accept' => 'application/json',
-            ]);
-
-        $this->applySsl($request);
-
-        $response = $request->post($this->dataUrl, [
+        $response = $this->hargaKotaHttpClient()->post($this->dataUrl, [
             'provinsi_id' => $provinsiId,
             'tgl' => $tgl,
         ]);
@@ -297,7 +292,39 @@ class Sp2kpHargaKotaService
             return [];
         }
 
-        return $this->normalizeHargaRows($response->json());
+        $decoded = $response->json();
+        $rows = $this->normalizeHargaRows($decoded);
+        if ($rows === [] && $this->emptyResponseSamplesLogged < 3) {
+            $this->emptyResponseSamplesLogged++;
+            $preview = $response->body();
+            $this->logger->warning('[Sp2kpHargaKotaService] OK response but no rows parsed (check API JSON shape or tgl)', [
+                'provinsi_id' => $provinsiId,
+                'tgl' => $tgl,
+                'top_keys' => is_array($decoded) ? array_keys($decoded) : null,
+                'body_preview' => mb_strlen($preview) > 1200 ? mb_substr($preview, 0, 1200).'…' : $preview,
+            ]);
+        }
+
+        return $rows;
+    }
+
+    protected function hargaKotaHttpClient(): PendingRequest
+    {
+        $headers = [
+            'x-api-key' => $this->xApiKey,
+            'Accept' => 'application/json',
+        ];
+        $request = Http::timeout(120)->asForm()->withHeaders($headers);
+
+        if ($this->apiAuthorization === 'token') {
+            $request = $request->withHeaders([
+                'Authorization' => (string) $this->accessToken,
+            ]);
+        } else {
+            $request = $request->withToken((string) $this->accessToken);
+        }
+
+        return $this->applySsl($request);
     }
 
     protected function ensureFreshToken(): void
@@ -314,21 +341,84 @@ class Sp2kpHargaKotaService
             return [];
         }
 
-        $rows = isset($json['data']) && is_array($json['data'])
-            ? $json['data']
-            : $json;
+        return $this->extractHargaRowList($json);
+    }
 
-        if (! is_array($rows)) {
+    /**
+     * @param  array<mixed>  $node
+     * @return bool
+     */
+    protected function looksLikeHargaRow(array $node): bool
+    {
+        return isset($node['Kode_Provinsi']) || isset($node['kode_provinsi'])
+            || isset($node['Kode_Commodity']) || isset($node['kode_commodity'])
+            || isset($node['Kode_Kabupaten']) || isset($node['kode_kabupaten']);
+    }
+
+    /**
+     * @param  array<mixed>  $node
+     * @return list<array<string, mixed>>
+     */
+    protected function extractHargaRowList(array $node): array
+    {
+        if ($this->looksLikeHargaRow($node)) {
+            return [$node];
+        }
+
+        if (array_is_list($node)) {
+            $filtered = $this->filterHargaRowsFromList($node);
+            if ($filtered !== []) {
+                return $filtered;
+            }
+            foreach ($node as $value) {
+                if (is_array($value)) {
+                    $fromChild = $this->extractHargaRowList($value);
+                    if ($fromChild !== []) {
+                        return $fromChild;
+                    }
+                }
+            }
+
             return [];
         }
 
-        if (! array_is_list($rows) && (isset($rows['Kode_Provinsi']) || isset($rows['kode_provinsi']))) {
-            return [$rows];
+        $envelopeKeys = [
+            'data', 'Data', 'DATA', 'result', 'Result', 'results', 'content', 'Content',
+            'list', 'List', 'items', 'Items', 'rows', 'Rows', 'records', 'Records',
+            'HargaKota', 'harga_kota', 'payload', 'Payload',
+        ];
+        foreach ($envelopeKeys as $key) {
+            if (! isset($node[$key]) || ! is_array($node[$key])) {
+                continue;
+            }
+            $fromInner = $this->extractHargaRowList($node[$key]);
+            if ($fromInner !== []) {
+                return $fromInner;
+            }
         }
 
+        foreach ($node as $value) {
+            if (! is_array($value)) {
+                continue;
+            }
+            $fromChild = $this->extractHargaRowList($value);
+            if ($fromChild !== []) {
+                return $fromChild;
+            }
+        }
+
+        return [];
+    }
+
+    /**
+     * @param  list<mixed>  $list
+     * @return list<array<string, mixed>>
+     */
+    protected function filterHargaRowsFromList(array $list): array
+    {
         $out = [];
-        foreach ($rows as $item) {
-            if (is_array($item)) {
+        foreach ($list as $item) {
+            if (is_array($item) && $this->looksLikeHargaRow($item)) {
                 $out[] = $item;
             }
         }

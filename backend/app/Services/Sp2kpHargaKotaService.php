@@ -287,6 +287,7 @@ class Sp2kpHargaKotaService
             'provinsi_id' => $provinsiId,
             'tgl' => $tgl,
         ]);
+        $this->logger->info( 'response status: ' . $response->status());
 
         if ($response->status() === 401 && $allowAuthRetry) {
             $this->logger->warning('[Sp2kpHargaKotaService] 401 on getHargaKota; refreshing token.');

@@ -162,6 +162,15 @@ return [
             'replace_placeholders' => true,
         ],
 
+        // Custom channel for neraca pangan kab/kota
+        'neraca_pangan' => [
+            'driver' => 'daily',
+            'path' => storage_path('logs/neraca-pangan.log'),
+            'level' => env('LOG_LEVEL', 'debug'),
+            'days' => env('LOG_DAILY_DAYS', 14),
+            'replace_placeholders' => true,
+        ],
+
     ],
 
 ];

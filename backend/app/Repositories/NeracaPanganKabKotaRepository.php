@@ -33,7 +33,7 @@ class NeracaPanganKabKotaRepository
                 );
             }
         } catch (\Exception $e) {
-            Log::error('Failed to upsert neraca_pangan_kab_kota: ' . $e->getMessage());
+            Log::channel('neraca_pangan')->error('Failed to upsert neraca_pangan_kab_kota: ' . $e->getMessage());
             throw $e;
         }
     }

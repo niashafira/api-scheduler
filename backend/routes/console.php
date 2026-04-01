@@ -4,10 +4,13 @@ use App\Jobs\ProcessHargaPanganData;
 use App\Jobs\ProcessHargaPanganHarianProdusenData;
 use App\Jobs\ProcessBgnPenerimaManfaatData;
 use App\Jobs\ProcessBgnSppgData;
+use App\Jobs\ProcessNeracaPanganKabKotaData;
 use App\Models\BgnPenerimaManfaat;
 use App\Models\BgnSppg;
+use App\Models\NeracaPanganKabKota;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schedule;
 
 Artisan::command('inspire', function () {
@@ -101,3 +104,33 @@ Schedule::call(function () {
         return BgnSppg::exists();
     })
     ->description('First run check for BGN SPPG - runs immediately on deployment if no data exists');
+
+// Schedule neraca pangan pooling daily using current period (Y-m)
+Schedule::call(function () {
+    $currentPeriod = now()->format('Y-m');
+    Log::channel('neraca_pangan')->info("[Neraca Pangan] Daily scheduled run for period {$currentPeriod}");
+    ProcessNeracaPanganKabKotaData::dispatch($currentPeriod, $currentPeriod);
+})
+    ->dailyAt('00:10')
+    ->name('fetch-neraca-pangan-kab-kota-daily')
+    ->withoutOverlapping()
+    ->description('Fetch neraca pangan kab/kota daily using current period');
+
+// Run neraca pangan immediately on first deployment if no data exists
+Schedule::call(function () {
+    $hasData = NeracaPanganKabKota::exists();
+
+    if (!$hasData) {
+        $currentPeriod = now()->format('Y-m');
+        Log::channel('neraca_pangan')->info("[Neraca Pangan] First deployment detected - executing immediately for period {$currentPeriod}");
+        ProcessNeracaPanganKabKotaData::dispatch($currentPeriod, $currentPeriod);
+    }
+})
+    ->everyMinute()
+    ->name('fetch-neraca-pangan-kab-kota-first-run')
+    ->withoutOverlapping()
+    ->skip(function () {
+        // Skip if data already exists (first run completed)
+        return NeracaPanganKabKota::exists();
+    })
+    ->description('First run check for neraca pangan kab/kota - runs immediately on deployment if no data exists');

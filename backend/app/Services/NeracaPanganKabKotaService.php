@@ -8,6 +8,8 @@ use Illuminate\Support\Facades\Log;
 
 class NeracaPanganKabKotaService
 {
+    protected $logger;
+
     protected NeracaPanganKabKotaRepository $repository;
 
     protected string $summaryApiUrl;
@@ -21,10 +23,11 @@ class NeracaPanganKabKotaService
     public function __construct(NeracaPanganKabKotaRepository $repository)
     {
         $this->repository = $repository;
+        $this->logger = Log::channel('neraca_pangan');
         $baseUrl = trim((string) config('services.neraca_pangan.api_url'));
         if ($baseUrl === '') {
             $baseUrl = 'https://proyeksineracapangan.badanpangan.go.id/api/summary';
-            Log::warning('[NeracaPanganKabKotaService] neraca_pangan.api_url was empty; using default summary URL.');
+            $this->logger->warning('[NeracaPanganKabKotaService] neraca_pangan.api_url was empty; using default summary URL.');
         }
         $this->summaryApiUrl = rtrim($baseUrl, '/');
         $this->apiKey = config('services.neraca_pangan.api_key');
@@ -41,14 +44,14 @@ class NeracaPanganKabKotaService
     {
         $provinsiIds = $this->loadProvinsiIdsFromJson();
         if ($provinsiIds === []) {
-            Log::warning('[NeracaPanganKabKotaService] No provinsi IDs loaded; aborting pool.');
+            $this->logger->warning('[NeracaPanganKabKotaService] No provinsi IDs loaded; aborting pool.');
 
             return 0;
         }
 
         $komoditasList = $this->loadKomoditasFromJson();
         if ($komoditasList === []) {
-            Log::warning('[NeracaPanganKabKotaService] No komoditas loaded; aborting pool.');
+            $this->logger->warning('[NeracaPanganKabKotaService] No komoditas loaded; aborting pool.');
 
             return 0;
         }
@@ -76,7 +79,7 @@ class NeracaPanganKabKotaService
                     $this->repository->upsertRecords($records);
                     $totalWritten += count($records);
                 } catch (\Exception $e) {
-                    Log::warning('[NeracaPanganKabKotaService] Failed for provinsi_id=' . $provinsiId . ', komoditas_id=' . $komoditasId . ': ' . $e->getMessage());
+                    $this->logger->warning('[NeracaPanganKabKotaService] Failed for provinsi_id=' . $provinsiId . ', komoditas_id=' . $komoditasId . ': ' . $e->getMessage());
                     continue;
                 }
             }
@@ -91,14 +94,14 @@ class NeracaPanganKabKotaService
     protected function loadProvinsiIdsFromJson(): array
     {
         if (!is_readable($this->provinsiIdsPath)) {
-            Log::warning('[NeracaPanganKabKotaService] Provinsi JSON not found: ' . $this->provinsiIdsPath);
+            $this->logger->warning('[NeracaPanganKabKotaService] Provinsi JSON not found: ' . $this->provinsiIdsPath);
 
             return [];
         }
 
         $decoded = json_decode((string) file_get_contents($this->provinsiIdsPath), true);
         if (!is_array($decoded) || !isset($decoded['provinsi_ids']) || !is_array($decoded['provinsi_ids'])) {
-            Log::warning('[NeracaPanganKabKotaService] Invalid provinsi JSON structure.');
+            $this->logger->warning('[NeracaPanganKabKotaService] Invalid provinsi JSON structure.');
 
             return [];
         }
@@ -112,14 +115,14 @@ class NeracaPanganKabKotaService
     protected function loadKomoditasFromJson(): array
     {
         if (!is_readable($this->komoditasPath)) {
-            Log::warning('[NeracaPanganKabKotaService] Komoditas JSON not found: ' . $this->komoditasPath);
+            $this->logger->warning('[NeracaPanganKabKotaService] Komoditas JSON not found: ' . $this->komoditasPath);
 
             return [];
         }
 
         $decoded = json_decode((string) file_get_contents($this->komoditasPath), true);
         if (!is_array($decoded) || !isset($decoded['komoditas']) || !is_array($decoded['komoditas'])) {
-            Log::warning('[NeracaPanganKabKotaService] Invalid komoditas JSON structure.');
+            $this->logger->warning('[NeracaPanganKabKotaService] Invalid komoditas JSON structure.');
 
             return [];
         }
@@ -180,7 +183,7 @@ class NeracaPanganKabKotaService
         ]);
 
         if (!$response->successful()) {
-            Log::warning('[NeracaPanganKabKotaService] HTTP ' . $response->status() . ' for provinsi_id=' . $provinsiId . ', komoditas_id=' . $komoditasId);
+            $this->logger->warning('[NeracaPanganKabKotaService] HTTP ' . $response->status() . ' for provinsi_id=' . $provinsiId . ', komoditas_id=' . $komoditasId);
 
             return [];
         }

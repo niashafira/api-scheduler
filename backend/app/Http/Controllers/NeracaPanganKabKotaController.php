@@ -2,16 +2,12 @@
 
 namespace App\Http\Controllers;
 
-use App\Services\NeracaPanganKabKotaService;
+use App\Jobs\ProcessNeracaPanganKabKotaData;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class NeracaPanganKabKotaController extends Controller
 {
-    public function __construct(
-        protected NeracaPanganKabKotaService $neracaPanganKabKotaService
-    ) {}
-
     /**
      * Pool neraca pangan kab/kota from the external API and upsert into the database.
      *
@@ -37,21 +33,20 @@ class NeracaPanganKabKotaController extends Controller
         }
 
         try {
-            $count = $this->neracaPanganKabKotaService->poolNeracaPanganKabKotaData($periodeAwal, $periodeAkhir);
+            ProcessNeracaPanganKabKotaData::dispatch($periodeAwal, $periodeAkhir);
 
             return response()->json([
                 'success' => true,
-                'message' => 'Pool completed.',
+                'message' => 'Pool request accepted. Background process is running.',
                 'data' => [
-                    'recordsWritten' => $count,
                     'periodeAwal' => $periodeAwal,
                     'periodeAkhir' => $periodeAkhir,
                 ],
-            ]);
+            ], 202);
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Pool failed.',
+                'message' => 'Failed to dispatch background pool job.',
                 'error' => $e->getMessage(),
             ], 500);
         }

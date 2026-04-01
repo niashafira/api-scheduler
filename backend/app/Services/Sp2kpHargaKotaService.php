@@ -42,6 +42,9 @@ class Sp2kpHargaKotaService
     /** Log full getHargaKota diagnostics for the first N provinces per pool run. */
     protected int $getHargaKotaDetailLogsRemaining = 0;
 
+    /** @var array<string, mixed>|null */
+    protected ?array $lastGetHargaKotaSummary = null;
+
     protected ?string $accessToken = null;
 
     protected float $tokenExpiresAt = 0.0;
@@ -73,6 +76,7 @@ class Sp2kpHargaKotaService
         $this->accessToken = null;
         $this->tokenExpiresAt = 0.0;
         $this->emptyResponseSamplesLogged = 0;
+        $this->lastGetHargaKotaSummary = null;
         $this->getHargaKotaDetailLogsRemaining = max(0, (int) config('services.sp2kp.diagnostic_request_logs', 15));
 
         $provinsiIds = $this->loadProvinsiIdsFromJson();
@@ -103,10 +107,14 @@ class Sp2kpHargaKotaService
                 $rows = $this->fetchHargaKotaForProvinsi($provinsiId, $tgl);
                 if ($rows === []) {
                     if ($idx === 1 || $idx % 10 === 0 || $idx === $totalProvinsi) {
-                        $this->logger->info('[Sp2kpHargaKotaService] Progress (empty)', [
+                        $ctx = [
                             'progress' => "{$idx}/{$totalProvinsi}",
                             'provinsi_id' => $provinsiId,
-                        ]);
+                        ];
+                        if (is_array($this->lastGetHargaKotaSummary)) {
+                            $ctx['empty_reason'] = $this->lastGetHargaKotaSummary;
+                        }
+                        $this->logger->info('[Sp2kpHargaKotaService] Progress (empty)', $ctx);
                     }
 
                     continue;
@@ -308,6 +316,7 @@ class Sp2kpHargaKotaService
         $decoded = $response->json();
         $rows = $response->successful() ? $this->normalizeHargaRows($decoded) : [];
 
+        $this->lastGetHargaKotaSummary = $this->buildGetHargaKotaSummary($response, $decoded, count($rows));
         $this->maybeLogGetHargaKotaDiagnostics($provinsiId, $tgl, $response, $decoded, count($rows));
 
         if (! $response->successful()) {
@@ -330,6 +339,38 @@ class Sp2kpHargaKotaService
         }
 
         return $rows;
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    protected function buildGetHargaKotaSummary(Response $response, mixed $decoded, int $normalizedRowCount): array
+    {
+        $summary = [
+            'http_status' => $response->status(),
+            'successful' => $response->successful(),
+            'normalized_row_count' => $normalizedRowCount,
+        ];
+
+        if (is_array($decoded)) {
+            $summary['json_top_keys'] = array_slice(array_keys($decoded), 0, 20);
+            $summary['api_kode'] = $decoded['kode'] ?? null;
+            $summary['api_keterangan'] = $decoded['keterangan'] ?? null;
+            if (array_key_exists('data', $decoded)) {
+                $d = $decoded['data'];
+                $summary['data_type'] = gettype($d);
+                if (is_array($d)) {
+                    $summary['data_count'] = count($d);
+                    $summary['data_is_list'] = array_is_list($d);
+                }
+            }
+        } else {
+            $summary['decoded_type'] = $decoded === null ? 'null' : gettype($decoded);
+            $body = $response->body();
+            $summary['body_preview'] = strlen($body) > 300 ? substr($body, 0, 300).'…' : $body;
+        }
+
+        return $summary;
     }
 
     /**

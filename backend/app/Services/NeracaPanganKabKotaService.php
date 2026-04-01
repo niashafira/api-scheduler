@@ -30,7 +30,7 @@ class NeracaPanganKabKotaService
             $this->logger->warning('[NeracaPanganKabKotaService] neraca_pangan.api_url was empty; using default summary URL.');
         }
         $this->summaryApiUrl = rtrim($baseUrl, '/');
-        $this->apiKey = config('services.neraca_pangan.api_key');
+        $this->apiKey = "sAxriNG5PHhgM2lJTSaZXv2X9Rxghe3Ai5IjuGm1tfFsKzuXgh6vRR7vsOHuyjBy";
         $this->provinsiIdsPath = storage_path('app/private/data/json/provinsi_ids.json');
         $this->komoditasPath = storage_path('app/private/data/json/komoditas.json');
     }

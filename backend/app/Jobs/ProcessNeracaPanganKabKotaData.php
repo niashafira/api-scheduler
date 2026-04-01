@@ -31,16 +31,29 @@ class ProcessNeracaPanganKabKotaData implements ShouldQueue
 
     public function handle(NeracaPanganKabKotaService $service): void
     {
+        $startedAt = microtime(true);
         $logger = Log::channel('neraca_pangan');
-        $logger->info("[ProcessNeracaPanganKabKotaData] Starting job for {$this->periodeAwal} to {$this->periodeAkhir}");
+        $logger->info('[ProcessNeracaPanganKabKotaData] START', [
+            'periode_awal' => $this->periodeAwal,
+            'periode_akhir' => $this->periodeAkhir,
+        ]);
 
         try {
             $count = $service->poolNeracaPanganKabKotaData($this->periodeAwal, $this->periodeAkhir);
-            $logger->info("[ProcessNeracaPanganKabKotaData] Completed. Records processed: {$count}");
+            $elapsedMs = (int) round((microtime(true) - $startedAt) * 1000);
+            $logger->info('[ProcessNeracaPanganKabKotaData] SUCCESS', [
+                'periode_awal' => $this->periodeAwal,
+                'periode_akhir' => $this->periodeAkhir,
+                'records_written' => $count,
+                'elapsed_ms' => $elapsedMs,
+            ]);
         } catch (\Throwable $e) {
-            $logger->error('[ProcessNeracaPanganKabKotaData] Failed: ' . $e->getMessage(), [
+            $elapsedMs = (int) round((microtime(true) - $startedAt) * 1000);
+            $logger->error('[ProcessNeracaPanganKabKotaData] FAILED', [
                 'periodeAwal' => $this->periodeAwal,
                 'periodeAkhir' => $this->periodeAkhir,
+                'elapsed_ms' => $elapsedMs,
+                'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),
             ]);
 

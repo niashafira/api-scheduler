@@ -42,6 +42,8 @@ class NeracaPanganKabKotaService
      */
     public function poolNeracaPanganKabKotaData(string $periodeAwal, string $periodeAkhir): int
     {
+        $startedAt = microtime(true);
+
         $provinsiIds = $this->loadProvinsiIdsFromJson();
         if ($provinsiIds === []) {
             $this->logger->warning('[NeracaPanganKabKotaService] No provinsi IDs loaded; aborting pool.');
@@ -57,6 +59,22 @@ class NeracaPanganKabKotaService
         }
 
         $totalWritten = 0;
+        $successCombos = 0;
+        $emptyCombos = 0;
+        $failedCombos = 0;
+
+        $totalProvinsi = count($provinsiIds);
+        $totalKomoditas = count($komoditasList);
+        $totalCombos = $totalProvinsi * $totalKomoditas;
+        $comboIndex = 0;
+
+        $this->logger->info('[NeracaPanganKabKotaService] Pool start', [
+            'periode_awal' => $periodeAwal,
+            'periode_akhir' => $periodeAkhir,
+            'komoditas_count' => $totalKomoditas,
+            'provinsi_count' => $totalProvinsi,
+            'total_combos' => $totalCombos,
+        ]);
 
         foreach ($komoditasList as $komoditas) {
             $komoditasId = (int) ($komoditas['id'] ?? 0);
@@ -65,10 +83,33 @@ class NeracaPanganKabKotaService
                 continue;
             }
 
+            $this->logger->info('[NeracaPanganKabKotaService] Komoditas start', [
+                'komoditas_id' => $komoditasId,
+                'komoditas' => $komoditasNama,
+                'provinsi_count' => $totalProvinsi,
+            ]);
+
             foreach ($provinsiIds as $provinsiId) {
+                $comboIndex++;
                 try {
+                    $reqStartedAt = microtime(true);
                     $rows = $this->fetchSummaryForProvinsi($provinsiId, $periodeAwal, $periodeAkhir, $komoditasId);
+                    $reqMs = (int) round((microtime(true) - $reqStartedAt) * 1000);
                     if ($rows === []) {
+                        $emptyCombos++;
+                        if ($comboIndex === 1 || $comboIndex % 25 === 0 || $comboIndex === $totalCombos) {
+                            $pct = $totalCombos > 0 ? round(($comboIndex / $totalCombos) * 100, 1) : 100.0;
+                            $this->logger->info('[NeracaPanganKabKotaService] Progress (empty)', [
+                                'progress' => "{$comboIndex}/{$totalCombos}",
+                                'progress_pct' => $pct,
+                                'komoditas_id' => $komoditasId,
+                                'komoditas' => $komoditasNama,
+                                'provinsi_id' => $provinsiId,
+                                'rows' => 0,
+                                'request_ms' => $reqMs,
+                                'total_written_so_far' => $totalWritten,
+                            ]);
+                        }
                         continue;
                     }
 
@@ -78,12 +119,54 @@ class NeracaPanganKabKotaService
                     );
                     $this->repository->upsertRecords($records);
                     $totalWritten += count($records);
+                    $successCombos++;
+
+                    if ($comboIndex === 1 || $comboIndex % 25 === 0 || $comboIndex === $totalCombos) {
+                        $pct = $totalCombos > 0 ? round(($comboIndex / $totalCombos) * 100, 1) : 100.0;
+                        $this->logger->info('[NeracaPanganKabKotaService] Progress', [
+                            'progress' => "{$comboIndex}/{$totalCombos}",
+                            'progress_pct' => $pct,
+                            'komoditas_id' => $komoditasId,
+                            'komoditas' => $komoditasNama,
+                            'provinsi_id' => $provinsiId,
+                            'rows' => count($records),
+                            'request_ms' => $reqMs,
+                            'total_written_so_far' => $totalWritten,
+                        ]);
+                    }
                 } catch (\Exception $e) {
-                    $this->logger->warning('[NeracaPanganKabKotaService] Failed for provinsi_id=' . $provinsiId . ', komoditas_id=' . $komoditasId . ': ' . $e->getMessage());
+                    $failedCombos++;
+                    $pct = $totalCombos > 0 ? round(($comboIndex / $totalCombos) * 100, 1) : null;
+                    $this->logger->warning('[NeracaPanganKabKotaService] Combo failed', [
+                        'progress' => "{$comboIndex}/{$totalCombos}",
+                        'progress_pct' => $pct,
+                        'komoditas_id' => $komoditasId,
+                        'komoditas' => $komoditasNama,
+                        'provinsi_id' => $provinsiId,
+                        'error' => $e->getMessage(),
+                    ]);
                     continue;
                 }
             }
+
+            $this->logger->info('[NeracaPanganKabKotaService] Komoditas done', [
+                'komoditas_id' => $komoditasId,
+                'komoditas' => $komoditasNama,
+                'total_written_so_far' => $totalWritten,
+            ]);
         }
+
+        $elapsedMs = (int) round((microtime(true) - $startedAt) * 1000);
+        $this->logger->info('[NeracaPanganKabKotaService] Pool success', [
+            'periode_awal' => $periodeAwal,
+            'periode_akhir' => $periodeAkhir,
+            'elapsed_ms' => $elapsedMs,
+            'total_written' => $totalWritten,
+            'combos_total' => $totalCombos,
+            'combos_success' => $successCombos,
+            'combos_empty' => $emptyCombos,
+            'combos_failed' => $failedCombos,
+        ]);
 
         return $totalWritten;
     }

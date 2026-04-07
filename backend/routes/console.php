@@ -107,37 +107,21 @@ Schedule::call(function () {
     })
     ->description('First run check for BGN SPPG - runs immediately on deployment if no data exists');
 
-// Schedule neraca pangan pooling daily using current period (Y-m)
+// Schedule neraca pangan pooling weekly using current year period (Y-01 to Y-12)
 Schedule::call(function () {
-    $currentPeriod = now()->format('Y-m');
-    Log::channel('neraca_pangan')->info("[Neraca Pangan] Daily scheduled run for period {$currentPeriod}");
-    ProcessNeracaPanganKabKotaData::dispatch($currentPeriod, $currentPeriod);
+    $year = now()->format('Y');
+    $startPeriod = "{$year}-01";
+    $endPeriod = "{$year}-12";
+
+    Log::channel('neraca_pangan')->info("[Neraca Pangan] Weekly scheduled run for period {$startPeriod} to {$endPeriod}");
+    ProcessNeracaPanganKabKotaData::dispatch($startPeriod, $endPeriod);
 })
-    ->dailyAt('00:10')
-    ->name('fetch-neraca-pangan-kab-kota-daily')
+    ->weeklyOn(1, '00:10')
+    ->name('fetch-neraca-pangan-kab-kota-weekly')
     ->withoutOverlapping()
-    ->description('Fetch neraca pangan kab/kota daily using current period');
+    ->description('Fetch neraca pangan kab/kota weekly using current year period');
 
-// Run neraca pangan immediately on first deployment if no data exists
-Schedule::call(function () {
-    $hasData = NeracaPanganKabKota::exists();
-
-    if (!$hasData) {
-        $currentPeriod = now()->format('Y-m');
-        Log::channel('neraca_pangan')->info("[Neraca Pangan] First deployment detected - executing immediately for period {$currentPeriod}");
-        ProcessNeracaPanganKabKotaData::dispatch($currentPeriod, $currentPeriod);
-    }
-})
-    ->everyMinute()
-    ->name('fetch-neraca-pangan-kab-kota-first-run')
-    ->withoutOverlapping()
-    ->skip(function () {
-        // Skip if data already exists (first run completed)
-        return NeracaPanganKabKota::exists();
-    })
-    ->description('First run check for neraca pangan kab/kota - runs immediately on deployment if no data exists');
-
-// SP2KP Harga Kota: every 7 hours with today's date (tgl)
+    // SP2KP Harga Kota: every 7 hours with today's date (tgl)
 Schedule::call(function () {
     $today = now()->format('Y-m-d');
     Sp2kpHargaKotaLogger::logger()->info("[SP2KP Harga Kota] Scheduled run for tgl {$today}");
